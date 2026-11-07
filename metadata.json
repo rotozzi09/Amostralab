@@ -1,0 +1,8 @@
+{
+  "name": "LabPiano — AmostraLab",
+  "description": "Virtual stage keyboard and musical workstation with organ, synth, soundfont sampler, layers, effects, and 88-key piano.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

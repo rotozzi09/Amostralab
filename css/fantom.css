@@ -1,0 +1,244 @@
+/* LabPiano: layout "Workstation" (html[data-skin="fantom"]), alternado pelo botão Layout.
+   Workstation preta: tela colorida no centro (lista de sons), knobs com anel ciano, painel do
+   synth em azul-ardósia e pads 4×4 rosa. Os mesmos controles do layout Nord, só reposicionados
+   e repintados; os pads são o único bloco próprio (escondido no layout Nord). */
+
+.m-pads, .m-perf { display: none; }
+
+[data-skin="fantom"] {
+  --chassis: #141517;
+  --led: #ff3a2e;
+  --led-off: #2a0d0b;
+  --ink: #e6e8ec;
+  --ink-dim: #8e949c;
+  --ring: #3fe4ff;
+  --ring-off: #0f2a31;
+  --pad: #ff3fc8;
+  --slate: #3d4a5b;
+  --slate-hi: #4b5a6d;
+  --slate-lo: #323d4b;
+  --scr-bg: #070a14;
+  --scr-sel: #6b3fe0;
+  --blk: #262a31;
+  --blk-hi: #2e333b;
+  --blk-lo: #1d2026;
+  --blk-ink: #dfe3e8;
+  --ink-dark: #dfe3e8;
+  --stage-h: 908; /* faixa de performance entre os módulos e o teclado */
+}
+
+/* ---------- Chassi ---------- */
+[data-skin="fantom"] .instrument,
+[data-skin="fantom"] .stage .instrument {
+  background:
+    linear-gradient(180deg, #3a3c40 0, #1c1d20 7px, #161719 12px, transparent 13px),
+    var(--grain),
+    linear-gradient(180deg, #1a1b1e 0, #131416 40%, #0d0e10 100%);
+  background-blend-mode: normal, soft-light, normal;
+}
+[data-skin="fantom"] .instrument::before,
+[data-skin="fantom"] .instrument::after { background: linear-gradient(90deg, #2b2d31, #0c0d0f); }
+[data-skin="fantom"] .felt { background: linear-gradient(180deg, #1b1c1f, #0c0c0d); }
+
+/* Ilhas: preto fosco com filete fino, rótulos impressos em branco. */
+[data-skin="fantom"] .module {
+  background: linear-gradient(180deg, #1d1f23, #17181b 50%, #141518);
+  box-shadow: 0 0 0 1px #2c2e33, inset 0 1px 0 #ffffff0d;
+  border-radius: 4px;
+}
+[data-skin="fantom"] .m-master { background: none; box-shadow: none; }
+[data-skin="fantom"] .module > h2, [data-skin="fantom"] .sec-head h2 { font-weight: 600; letter-spacing: 3px; color: #f2f3f5; text-shadow: none; }
+[data-skin="fantom"] .module > h2::after, [data-skin="fantom"] .sec-head h2::after { background: linear-gradient(90deg, #ffffff55, #ffffff10); }
+[data-skin="fantom"] :is(.well, .inset, .m-organ .drawbars, .m-organ .opts .col, .m-program .programs) {
+  background: #0e0f11; box-shadow: inset 0 1px 3px #000c, 0 0 0 1px #26282c;
+}
+
+/* Botões de borracha preta com legenda branca. */
+[data-skin="fantom"] :is(.btn, .mini, .rubber, .selector.multi button) {
+  background: linear-gradient(180deg, #2c2e32 0, #212326 50%, #1a1b1e 100%);
+  box-shadow: 0 0 0 1px #050506, 0 2px 0 1px #050506, 0 3px 4px #0009, inset 0 1px 0 #ffffff1c;
+}
+[data-skin="fantom"] :is(.btn, .mini, .rubber, .selector.multi button):hover { background: linear-gradient(180deg, #34363b 0, #282a2e 50%, #1f2023 100%); }
+
+/* Knobs: tampa preta e anel de LEDs ciano. */
+[data-skin="fantom"] .knob .ring i { background: var(--ring-off); }
+[data-skin="fantom"] .knob .ring i.lit { background: radial-gradient(circle, #e8fdff 0, var(--ring) 55%, #0aa5c4 100%); box-shadow: 0 0 4px 1px #3fe4ffcc, 0 0 10px 2px #3fe4ff44; }
+[data-skin="fantom"] .knob .cap {
+  background:
+    radial-gradient(circle at 50% 50%, transparent 55%, #0006 100%),
+    conic-gradient(from 10deg, #2a2c30, #5a5d63 10%, #232528 24%, #45484d 36%, #1c1e21 50%, #55585e 62%, #222427 76%, #4a4d52 88%, #2a2c30);
+}
+[data-skin="fantom"] .knob .cap b::before { background: #f2f4f6; box-shadow: none; }
+
+/* ---------- Tela colorida (lista de sons do Piano + display do Program) ---------- */
+[data-skin="fantom"] .m-piano .type-list {
+  background: var(--scr-bg);
+  box-shadow: 0 0 0 3px #050507, 0 0 0 4px #2f3237, inset 0 0 18px #000;
+  border-radius: 3px; counter-reset: tone;
+}
+[data-skin="fantom"] .m-piano .type-list button { color: #c9d2e3; border-radius: 2px; }
+[data-skin="fantom"] .m-piano .type-list button .nm::before { counter-increment: tone; content: counter(tone, decimal-leading-zero) ":"; margin-right: 4px; color: #7d8aa3; }
+[data-skin="fantom"] .m-piano .type-list button.on { color: #fff; background: linear-gradient(90deg, var(--scr-sel), #8a4ff0); box-shadow: 0 0 10px #7b4cff66; }
+[data-skin="fantom"] .m-piano .type-list button.on .nm::before { color: #e6dcff; }
+[data-skin="fantom"] .m-piano .type-list button.on .led { background: #fff; box-shadow: 0 0 6px #fff; }
+[data-skin="fantom"] .m-piano .type-list button:hover { background: #ffffff12; }
+
+[data-skin="fantom"] .oled {
+  background: linear-gradient(180deg, #0c1222 0, var(--scr-bg) 60%);
+  box-shadow: 0 0 0 3px #050507, 0 0 0 4px #2f3237, inset 0 0 18px #000;
+  color: #f1f4fb;
+}
+[data-skin="fantom"] .oled::before { display: none; }
+[data-skin="fantom"] .oled-title { color: #fff; }
+[data-skin="fantom"] .oled-line { color: #aab8d6; }
+[data-skin="fantom"] .oled-bar { background: #ffffff14; box-shadow: none; }
+[data-skin="fantom"] .oled-bar i { background: linear-gradient(90deg, #7b5cff, #d24bff); box-shadow: 0 0 6px #b34bff; }
+[data-skin="fantom"] .oled-status { color: #8fe9ff; }
+
+/* ---------- Synth: placa azul-ardósia, blocos com filete claro ---------- */
+[data-skin="fantom"] .m-synth { background: linear-gradient(180deg, var(--slate-hi), var(--slate) 40%, var(--slate-lo)); box-shadow: 0 0 0 1px #1b222b, inset 0 1px 0 #ffffff1f; }
+[data-skin="fantom"] .m-synth .syn-blk { background: #00000022; box-shadow: inset 0 0 0 1px #9fb1c733; border-radius: 3px; }
+[data-skin="fantom"] .m-synth .blk-h { color: #e8eef6; }
+[data-skin="fantom"] .m-synth .viz { background: var(--scr-bg); }
+[data-skin="fantom"] .m-synth .knob { color: #c5d0dd; }
+
+/* Blocos claros (FX, Amp) viram grafite para combinar com o chassi preto. */
+[data-skin="fantom"] :is(.fx-block, .amp-col) { background: linear-gradient(180deg, var(--blk-hi), var(--blk) 50%, var(--blk-lo)); box-shadow: inset 0 0 0 1px #3a3e46; }
+[data-skin="fantom"] :is(.fx-block, .amp-col) .blk-h { color: var(--blk-ink); }
+[data-skin="fantom"] :is(.amp-col, .syn-blk, .fx-block) .knob { color: #b9c3cf; }
+[data-skin="fantom"] .selector.compact button:not(.rubber) { color: #9ea8b4; }
+[data-skin="fantom"] .selector.compact button:not(.rubber):hover { color: #fff; background: #ffffff10; }
+[data-skin="fantom"] .selector.compact button.on { color: #fff; }
+
+/* ---------- Pads 4×4 ---------- */
+[data-skin="fantom"] .m-pads { display: flex; flex-direction: column; }
+.pads { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: 6px; flex: 1; min-height: 0; }
+.pad {
+  position: relative; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start;
+  min-height: 34px; padding: 4px 5px; border: 0; border-radius: 4px; cursor: pointer; touch-action: none;
+  background: linear-gradient(180deg, #2a1424, #1a0c17);
+  box-shadow: inset 0 0 0 2px var(--pad), 0 0 8px #ff3fc844, 0 2px 0 #050506;
+  color: #ffc7ee; font: 700 9px/1 var(--font); letter-spacing: .5px;
+  transition: background .05s, box-shadow .08s, transform .05s;
+}
+.pad span { align-self: flex-end; font-weight: 500; opacity: .6; }
+.pad:hover { background: linear-gradient(180deg, #3a1a31, #23101f); }
+.pad.down {
+  transform: translateY(1px);
+  background: radial-gradient(circle at 50% 45%, #ffd6f5 0, var(--pad) 45%, #c41f95 100%);
+  box-shadow: inset 0 0 0 2px #ffd6f5, 0 0 18px 4px #ff3fc8aa; color: #3a0a2d;
+}
+.pad:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* ---------- Palco 1600 × 840: FX mais curto, pads à direita, marca e ferramentas na ponta ---------- */
+[data-skin="fantom"] .stage .m-fx { width: 1000px; }
+[data-skin="fantom"] .stage .m-pads { position: absolute; top: 462px; left: 1040px; width: 220px; height: 186px; padding: 10px 12px 12px; }
+[data-skin="fantom"] .stage .m-pads > h2 { position: static; height: 18px; font-size: 13px; letter-spacing: 2.4px; display: flex; align-items: center; gap: 8px; }
+[data-skin="fantom"] .stage .m-pads > h2::before { display: none; }
+[data-skin="fantom"] .stage .wordmark { left: 1276px; width: 298px; }
+[data-skin="fantom"] .stage .wm-name { font-size: 54px; }
+[data-skin="fantom"] .stage .tools { left: 1276px; width: 298px; flex-wrap: wrap; }
+
+/* Fora do palco (celular/tablet): pads numa faixa própria, abaixo do FX. */
+[data-skin="fantom"] body:not(.stage) .m-pads { order: 10; flex: 1 1 100%; padding: 10px; }
+[data-skin="fantom"] body:not(.stage) .pad { min-height: 48px; }
+
+/* Pads: modo (Sample / Note / Zone / Step), Assign e estados. */
+.pad-mode { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin: 2px 0 6px; }
+:is(.pad-mode, .perf-sel) button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 20px; padding: 0 6px;
+  border: 0; border-radius: 3px; cursor: pointer; background: #0e0f11; box-shadow: inset 0 0 0 1px #2c2f35;
+  color: #8e949c; font: 700 9.5px/1 var(--font); letter-spacing: .6px; text-transform: uppercase;
+}
+:is(.pad-mode, .perf-sel) button:hover { color: #fff; }
+:is(.pad-mode, .perf-sel) button.on { color: #e8fdff; background: #0c2a31; box-shadow: inset 0 0 0 1px #3fe4ff88, 0 0 8px #3fe4ff33; }
+.pad-mode .led { width: 5px; height: 5px; }
+.m-pads > h2 .pad-assign { margin-left: auto; height: 18px; padding: 0 7px; font-size: 9px; letter-spacing: .8px; }
+.pad { min-width: 0; overflow: hidden; }
+.pad span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pad.dim { opacity: .45; }
+.pad.lit { background: linear-gradient(180deg, #5a1c4a, #34102b); box-shadow: inset 0 0 0 2px #ffb3ea, 0 0 14px 2px #ff3fc877; color: #fff; }
+.pad.cur { outline: 2px solid #3fe4ff; outline-offset: 1px; }
+.pad.loop b::after { content: " ↻"; font-weight: 500; opacity: .8; }
+.pad.drag { box-shadow: inset 0 0 0 2px #fff, 0 0 18px 4px #ff3fc8aa; }
+
+/* ---------- Faixa de performance: Tempo, Arpeggio, Chord, Step Sequencer ---------- */
+[data-skin="fantom"] .m-perf { display: flex; flex-direction: row; gap: 10px; align-items: stretch; flex-wrap: wrap; }
+.perf-blk { display: flex; flex-direction: column; gap: 6px; padding: 6px 10px 8px; border-radius: 3px; background: #0e0f11; box-shadow: inset 0 1px 3px #000c, 0 0 0 1px #26282c; }
+.perf-blk .blk-h { margin: 0; color: #f2f3f5; font: 600 10px/1 var(--font); letter-spacing: 2px; text-transform: uppercase; }
+.perf-row { display: flex; align-items: center; gap: 6px; }
+.perf-sel { display: flex; gap: 2px; }
+.perf-row .btn.small { height: 22px; padding: 0 8px; font-size: 10px; }
+.perf-seq { flex: 1; min-width: 0; }
+.steps { display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 3px; flex: 1; min-width: 0; margin-left: 4px; }
+.step {
+  position: relative; height: 26px; padding: 2px 3px; border: 0; border-radius: 3px; cursor: pointer;
+  display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start;
+  background: linear-gradient(180deg, #2c2e32, #1c1d20); box-shadow: 0 0 0 1px #050506, inset 0 1px 0 #ffffff14;
+  color: #9ea8b4; font: 700 8px/1 var(--font);
+}
+.step:nth-child(4n+1) { margin-left: 3px; }
+.step:nth-child(1) { margin-left: 0; }
+.step .led { position: absolute; top: 3px; right: 3px; width: 5px; height: 5px; }
+.step i { font-style: normal; font-weight: 500; color: #8fe9ff; font-size: 8px; }
+.step:nth-child(-n+4).on { --step: #ff5a4a; }
+.step:nth-child(n+5):nth-child(-n+8).on { --step: #ffa23a; }
+.step:nth-child(n+9):nth-child(-n+12).on { --step: #ffe14a; }
+.step:nth-child(n+13).on { --step: #f2f4f6; }
+.step.on .led { background: var(--step); box-shadow: 0 0 6px var(--step); }
+.step.cur { background: linear-gradient(180deg, #3d4046, #2a2c31); color: #fff; box-shadow: 0 0 0 1px #3fe4ff, 0 0 10px #3fe4ff66; }
+.step.cursor { box-shadow: 0 0 0 1px #050506, inset 0 0 0 1px #ff3fc8; }
+#tapBtn.flash .led { animation: led-on .2s; background: var(--led); }
+
+/* Palco: faixa entre os módulos de baixo (462–648) e o teclado, que desce 68 px. */
+[data-skin="fantom"] .stage .instrument { height: 908px; }
+[data-skin="fantom"] .stage .keybed { top: 736px; }
+[data-skin="fantom"] .stage .m-perf { top: 658px; left: 26px; width: 1548px; height: 68px; padding: 6px 8px; gap: 8px; flex-wrap: nowrap; }
+[data-skin="fantom"] .stage .m-pads .pads { gap: 5px; }
+[data-skin="fantom"] .stage .m-pads .pad { min-height: 0; }
+[data-skin="fantom"] body:not(.stage) .m-perf { order: 11; flex: 1 1 100%; padding: 10px; }
+[data-skin="fantom"] body:not(.stage) .perf-row { flex-wrap: wrap; }
+[data-skin="fantom"] body:not(.stage) .steps { flex: 1 1 100%; margin: 0; }
+
+/* Arrastar áudio para um pad: o aviso global não pode cobrir os pads. */
+[data-skin="fantom"] .drop { pointer-events: none; }
+
+/* ---------- Biblioteca de amostras (diálogo dos pads) ---------- */
+.padlib {
+  width: min(760px, 94vw); max-height: 82vh; padding: 0; border: 0; border-radius: 8px;
+  background: #15161a; color: #e6e8ec; box-shadow: 0 0 0 1px #2f3237, 0 24px 60px #000c;
+  font-family: var(--font, system-ui);
+}
+.padlib[open] { display: flex; flex-direction: column; }
+.padlib::backdrop { background: #000a; }
+.lib-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 8px; }
+.lib-head h3 { margin: 0; font: 600 14px/1 var(--font); letter-spacing: 2px; text-transform: uppercase; }
+.lib-head em { font-style: normal; margin-left: 8px; color: #ff3fc8; }
+.lib-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 14px 10px; }
+.lib-bar input, .lib-bar select { height: 28px; padding: 0 8px; border: 0; border-radius: 4px; background: #0a0b0d; color: #e6e8ec; box-shadow: inset 0 0 0 1px #2f3237; font: 500 13px var(--font); }
+.lib-bar input { flex: 1 1 220px; }
+.lib-count { margin-left: auto; color: #8e949c; font-size: 12px; }
+.lib-list { list-style: none; margin: 0; padding: 0 8px; overflow-y: auto; flex: 1; min-height: 160px; }
+.lib-list li { display: grid; grid-template-columns: 28px 1fr auto auto; align-items: center; gap: 10px; padding: 6px; border-radius: 4px; }
+.lib-list li:hover { background: #ffffff0a; }
+.lib-list .lib-msg { display: block; padding: 18px 10px; color: #8e949c; }
+.lib-play { width: 28px; height: 28px; border: 0; border-radius: 50%; cursor: pointer; background: #0c2a31; color: #3fe4ff; font-size: 11px; }
+.lib-nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.lib-meta { color: #8e949c; font-size: 12px; white-space: nowrap; }
+.lib-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px 12px; border-top: 1px solid #26282c; }
+.lib-foot a { margin-left: auto; color: #8fe9ff; font-size: 12px; }
+@media (max-width: 560px) {
+  .lib-list li { grid-template-columns: 28px 1fr auto; }
+  .lib-meta { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pad { transition: none; }
+}
+
+[data-skin="fantom"] .am-chassis::before {
+  background: linear-gradient(90deg, #7b5cff, #d24bff 50%, #7b5cff);
+}
+[data-skin="fantom"] .am-sec-h {
+  color: #c084fc;
+}
