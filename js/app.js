@@ -757,9 +757,9 @@ async function addFiles(files, module = "piano") {
       if (first < 0) first = i;
     }
   }
-  renderPianoList();
-  renderStringsList();
-  renderSynthList();
+  if (module === "piano") renderPianoList();
+  else if (module === "strings") renderStringsList();
+  else if (module === "synth") renderSynthList();
   if (first >= 0) {
     if (module === "piano") selectPiano(first, state.focus.piano);
     else if (module === "strings") selectStrings(first, state.focus.strings);
@@ -781,11 +781,9 @@ async function loadServerSounds() {
       const list = await res.json();
       if (Array.isArray(list)) {
         for (const s of list) {
-          if (pianoSounds.some((x) => x.name === s.name)) continue;
-          const sound = urlSound(s.name, s.size, `sounds/${encodeURIComponent(s.name)}`);
-          pianoSounds.push(sound);
-          stringsSounds.push(sound);
-          synthSounds.push(sound);
+          if (!pianoSounds.some((x) => x.name === s.name)) pianoSounds.push(urlSound(s.name, s.size, `sounds/${encodeURIComponent(s.name)}`));
+          if (!stringsSounds.some((x) => x.name === s.name)) stringsSounds.push(urlSound(s.name, s.size, `sounds/${encodeURIComponent(s.name)}`));
+          if (!synthSounds.some((x) => x.name === s.name)) synthSounds.push(urlSound(s.name, s.size, `sounds/${encodeURIComponent(s.name)}`));
         }
       }
     }
@@ -793,16 +791,30 @@ async function loadServerSounds() {
   if (!pianoSounds.length) {
     try {
       const { generateDefaultSound } = await import("./defaultSound.js");
-      const sound = generateDefaultSound();
-      pianoSounds.push(sound);
-      stringsSounds.push(sound);
-      synthSounds.push(sound);
+      pianoSounds.push(generateDefaultSound());
+    } catch (err) {
+      console.warn("Erro ao gerar som padrão:", err);
+    }
+  }
+  if (!stringsSounds.length) {
+    try {
+      const { generateDefaultSound } = await import("./defaultSound.js");
+      stringsSounds.push(generateDefaultSound());
+    } catch (err) {
+      console.warn("Erro ao gerar som padrão:", err);
+    }
+  }
+  if (!synthSounds.length) {
+    try {
+      const { generateDefaultSound } = await import("./defaultSound.js");
+      synthSounds.push(generateDefaultSound());
     } catch (err) {
       console.warn("Erro ao gerar som padrão:", err);
     }
   }
   renderPianoList();
   renderStringsList();
+  renderSynthList();
 }
 
 // Tamanho de um SF2 remoto: HEAD (Content-Length) ou GET Range bytes=0-0 (Content-Range ".../TOTAL").
@@ -902,18 +914,10 @@ $("presetPrev").addEventListener("click", () => stepSynthPreset(-1));
 $("presetNext").addEventListener("click", () => stepSynthPreset(1));
 $("synthLoadBtn").addEventListener("click", () => (access.full ? $("synthFileInput").click() : lockedNotice(access, "Abrir outros SF2")));
 $("synthFileInput").addEventListener("change", (e) => {
-  const f = e.target.files[0];
-  if (!f) return;
-  let i = synthSounds.findIndex((s) => s.name === f.name && s.size === f.size);
-  if (i < 0) {
-    const sound = { name: f.name, size: f.size, file: f, nord: isNord(f.name), wav: isWav(f.name), slice: (a, b) => f.slice(a, b) };
-    pianoSounds.push(sound);
-    stringsSounds.push(sound);
-    synthSounds.push(sound);
-    i = synthSounds.length - 1;
-    renderPianoList();
+  if (e.target.files.length) {
+    addFiles(e.target.files, "synth");
+    e.target.value = "";
   }
-  selectSynthSound(i);
 });
 
 // ?synth=<url>&synthName=<nome>: abre um SF2 direto no Synth (ex.: um pad da biblioteca do AmostraLab).
@@ -925,7 +929,7 @@ async function loadUrlParamSynth() {
   try {
     const sound = urlSound(name, await remoteSize(url), url);
     synthSounds.push(sound);
-    renderPianoList();
+    renderSynthList();
     selectSynthSound(synthSounds.length - 1);
   } catch (err) {
     synthLcd(name, "Erro ao abrir o SF2", 0);
@@ -1024,7 +1028,21 @@ let dragDepth = 0;
 addEventListener("dragenter", (e) => { e.preventDefault(); dragDepth++; $("drop").classList.add("show"); });
 addEventListener("dragleave", () => { if (--dragDepth <= 0) { dragDepth = 0; $("drop").classList.remove("show"); } });
 addEventListener("dragover", (e) => e.preventDefault());
-addEventListener("drop", (e) => { e.preventDefault(); dragDepth = 0; $("drop").classList.remove("show"); addFiles(e.dataTransfer.files, "piano"); });
+addEventListener("drop", (e) => {
+  e.preventDefault();
+  dragDepth = 0;
+  $("drop").classList.remove("show");
+  let mod = "piano";
+  const target = e.target;
+  if (target && target.closest) {
+    if (target.closest('#stringsList, [data-syn-tab="strings"], [data-tab-pane="strings"]')) {
+      mod = "strings";
+    } else if (target.closest('#synthList, [data-syn-tab="synth"], [data-tab-pane="synth"]')) {
+      mod = "synth";
+    }
+  }
+  addFiles(e.dataTransfer.files, mod);
+});
 
 // ---------- Programas ----------
 const PROG_KEY = "labpiano.programs.v2";
