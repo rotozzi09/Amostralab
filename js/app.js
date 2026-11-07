@@ -1,10 +1,10 @@
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/sw.js").catch(() => {});
+  navigator.serviceWorker.register("/sw.js?v=6").catch(() => {});
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     window.location.reload();
   });
 }
-console.log("LabPiano App v3 loading...");
+console.log("LabPiano App v6 loading...");
 
 // Liga painel, motores e leitor. Programas (A:01–A:08) guardam o painel inteiro no navegador.
 // Layers A/B, zonas, split, amp e efeitos seguem o app nativo (Source/PluginEditor.cpp).
@@ -781,9 +781,9 @@ async function loadServerSounds() {
       const list = await res.json();
       if (Array.isArray(list)) {
         for (const s of list) {
-          if (!pianoSounds.some((x) => x.name === s.name)) pianoSounds.push(urlSound(s.name, s.size, `sounds/${encodeURIComponent(s.name)}`));
-          if (!stringsSounds.some((x) => x.name === s.name)) stringsSounds.push(urlSound(s.name, s.size, `sounds/${encodeURIComponent(s.name)}`));
-          if (!synthSounds.some((x) => x.name === s.name)) synthSounds.push(urlSound(s.name, s.size, `sounds/${encodeURIComponent(s.name)}`));
+          if (!pianoSounds.some((x) => x.name === s.name)) {
+            pianoSounds.push(urlSound(s.name, s.size, `sounds/${encodeURIComponent(s.name)}`));
+          }
         }
       }
     }
@@ -792,22 +792,6 @@ async function loadServerSounds() {
     try {
       const { generateDefaultSound } = await import("./defaultSound.js");
       pianoSounds.push(generateDefaultSound());
-    } catch (err) {
-      console.warn("Erro ao gerar som padrão:", err);
-    }
-  }
-  if (!stringsSounds.length) {
-    try {
-      const { generateDefaultSound } = await import("./defaultSound.js");
-      stringsSounds.push(generateDefaultSound());
-    } catch (err) {
-      console.warn("Erro ao gerar som padrão:", err);
-    }
-  }
-  if (!synthSounds.length) {
-    try {
-      const { generateDefaultSound } = await import("./defaultSound.js");
-      synthSounds.push(generateDefaultSound());
     } catch (err) {
       console.warn("Erro ao gerar som padrão:", err);
     }

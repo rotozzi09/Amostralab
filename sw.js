@@ -1,41 +1,31 @@
-const CACHE_NAME = "labpiano-v3";
-console.log("Service Worker v3 loading...");
-const ASSETS = [
-  "/",
-  "/index.html",
-  "/css/app.css",
-  "/css/native.css",
-  "/js/app.js",
-  "/manifest.json"
-];
+const CACHE_NAME = "labpiano-v6";
+console.log("Service Worker v6 loading...");
 
-self.addEventListener("install", (e) => {
-  console.log("Service Worker: installing...");
+self.addEventListener("install", () => {
   self.skipWaiting();
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log("Service Worker: caching assets...");
-      return cache.addAll(ASSETS);
-    })
-  );
 });
 
 self.addEventListener("activate", (e) => {
-  console.log("Service Worker: activating...");
+  console.log("Service Worker: activating v6...");
   e.waitUntil(
-    caches.keys().then((keys) => Promise.all(
-      keys.map((k) => {
-        if (k !== CACHE_NAME) {
-          console.log("Service Worker: deleting old cache", k);
-          return caches.delete(k);
-        }
-      })
-    )).then(() => self.clients.claim())
+    caches.keys().then((keys) =>
+      Promise.all(keys.map((k) => caches.delete(k)))
+    ).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener("fetch", (e) => {
+  if (e.request.method !== "GET") return;
+  // Network-first strategy for code and assets
   e.respondWith(
-    caches.match(e.request).then((res) => res || fetch(e.request))
+    fetch(e.request)
+      .then((response) => {
+        if (response && response.status === 200 && response.type === "basic") {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+        }
+        return response;
+      })
+      .catch(() => caches.match(e.request))
   );
 });
