@@ -1,0 +1,1563 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#8c1a11" />
+    <title>LabPiano — AmostraLab</title>
+    <meta name="description" content="Virtual stage keyboard and musical workstation with organ, synth, soundfont sampler, layers, effects, and 88-key piano." />
+    <meta property="og:title" content="LabPiano — AmostraLab" />
+    <meta property="og:description" content="Virtual stage keyboard and musical workstation with organ, synth, soundfont sampler, layers, effects, and 88-key piano." />
+    <link rel="icon" href="data:," />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&amp;family=Share+Tech+Mono&amp;display=swap" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="css/native.css" />
+    <link rel="stylesheet" href="css/fantom.css?v=6" />
+    <link rel="manifest" href="manifest.json?v=3" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="LabPiano" />
+    <script>
+      try {
+        const k = localStorage.getItem("labpiano.skin");
+        if (k === "fantom") document.documentElement.dataset.skin = k;
+        const c = localStorage.getItem("labpiano.ws_color");
+        if (c) document.documentElement.dataset.wsColor = c;
+      } catch { /* sem storage */ }
+    </script>
+  </head>
+  <body>
+    <main class="instrument" id="instrument">
+      <div class="panel">
+        <!-- MASTER: impresso direto no vermelho -->
+        <section class="module m-master">
+          <h2>
+            Master
+          </h2>
+          <div class="knob " data-param="master" data-value="0.8" data-label="Level">
+          </div>
+          <div class="meter" id="meter" aria-hidden="true">
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+          </div>
+          <div class="rotary-box">
+            <h3>
+              Rotary
+            </h3>
+            <div class="selector " id="rotarySel">
+              <button type="button" data-rotary="0" class="on">
+                <span class="led"></span>
+                Off
+              </button>
+              <button type="button" data-rotary="1">
+                <span class="led"></span>
+                Slow
+              </button>
+              <button type="button" data-rotary="2">
+                <span class="led"></span>
+                Fast
+              </button>
+            </div>
+          </div>
+          <div class="knob " data-param="drive" data-value="0.15" data-label="Drive">
+          </div>
+          <button type="button" class="btn audio-midi-btn" id="audioMidiBtn" aria-label="Configurações de Áudio e MIDI" title="Configurações de Áudio, Dispositivos MIDI e Amostras">
+            <span class="led"></span>
+            <i class="ic" data-icon="gear" data-size="13"></i>
+            <span>Audio/MIDI</span>
+          </button>
+        </section>
+        <div class="ws-color-box" id="wsColorBox" title="Seleção de Cor do Layout">
+          <h3 class="ws-color-title">
+            <i class="ic" data-icon="palette" data-size="11"></i>
+            <span>Cor Layout</span>
+          </h3>
+          <div class="ws-color-menu" id="wsColorMenu" role="radiogroup" aria-label="Cor do Layout">
+            <button type="button" role="radio" data-ws-color="red" class="on" title="Vermelho - Padrão" aria-checked="true">
+              <span class="swatch red"></span>
+            </button>
+            <button type="button" role="radio" data-ws-color="orange" title="Laranja" aria-checked="false">
+              <span class="swatch orange"></span>
+            </button>
+            <button type="button" role="radio" data-ws-color="yellow" title="Amarelo" aria-checked="false">
+              <span class="swatch yellow"></span>
+            </button>
+            <button type="button" role="radio" data-ws-color="green" title="Verde" aria-checked="false">
+              <span class="swatch green"></span>
+            </button>
+            <button type="button" role="radio" data-ws-color="moss" title="Verde Musgo" aria-checked="false">
+              <span class="swatch moss"></span>
+            </button>
+            <button type="button" role="radio" data-ws-color="darkblue" title="Azul escuro" aria-checked="false">
+              <span class="swatch darkblue"></span>
+            </button>
+            <button type="button" role="radio" data-ws-color="lightblue" title="Azul Claro" aria-checked="false">
+              <span class="swatch lightblue"></span>
+            </button>
+            <button type="button" role="radio" data-ws-color="purple" title="Roxo" aria-checked="false">
+              <span class="swatch purple"></span>
+            </button>
+            <button type="button" role="radio" data-ws-color="white" title="Branco" aria-checked="false">
+              <span class="swatch white"></span>
+            </button>
+          </div>
+        </div>
+        <!-- ORGAN -->
+        <section class="module m-organ section" data-section="organ" data-focus="A">
+          <header class="sec-head">
+            <h2>
+              Organ
+            </h2>
+            <button type="button" class="btn on-btn" data-on="organ" aria-pressed="false" aria-label="Organ">
+              <span class="led"></span>
+              <i class="ic" data-icon="power" data-size="12"></i>
+              On
+            </button>
+          </header>
+          <div class="layer-row">
+            <button type="button" class="lbtn" data-lsec="organ" data-layer="A" aria-pressed="false" title="Layer A: clique para editar; clique de novo para ligar/desligar">
+              <span class="led"></span>
+              <b>              A
+</b>
+            </button>
+            <button type="button" class="lbtn" data-lsec="organ" data-layer="B" aria-pressed="false" title="Layer B: clique para editar; clique de novo para ligar/desligar">
+              <span class="led"></span>
+              <b>              B
+</b>
+            </button>
+            <div class="lctl" data-l="A">
+              <div class="knob xs" data-param="L.organ.A.level" data-value="0.8" data-label="Level">
+              </div>
+              <div class="lstep">
+                <span>                Oct
+</span>
+                <button type="button" class="mini" data-loct="organ:A:-1" aria-label="Oitava da layer A abaixo">
+                  −
+                </button>
+                <span class="seg-sm" data-loctv="organ:A" role="status"></span>
+                <button type="button" class="mini" data-loct="organ:A:1" aria-label="Oitava da layer A acima">
+                  +
+                </button>
+              </div>
+              <div class="zone" data-zone="organ:A" role="radiogroup" aria-label="Zona da layer A">
+                <span class="zone-t">                Zone
+</span>
+                <button type="button" role="radio" data-z="lower" aria-checked="false">
+                  <span class="led"></span>
+                  <b>                  Low
+</b>
+                </button>
+                <button type="button" role="radio" data-z="all" class="on" aria-checked="true">
+                  <span class="led"></span>
+                  <b>                  All
+</b>
+                </button>
+                <button type="button" role="radio" data-z="upper" aria-checked="false">
+                  <span class="led"></span>
+                  <b>                  Up
+</b>
+                </button>
+              </div>
+            </div>
+            <div class="lctl" data-l="B">
+              <div class="knob xs" data-param="L.organ.B.level" data-value="0.8" data-label="Level">
+              </div>
+              <div class="lstep">
+                <span>                Oct
+</span>
+                <button type="button" class="mini" data-loct="organ:B:-1" aria-label="Oitava da layer B abaixo">
+                  −
+                </button>
+                <span class="seg-sm" data-loctv="organ:B" role="status"></span>
+                <button type="button" class="mini" data-loct="organ:B:1" aria-label="Oitava da layer B acima">
+                  +
+                </button>
+              </div>
+              <div class="zone" data-zone="organ:B" role="radiogroup" aria-label="Zona da layer B">
+                <span class="zone-t">                Zone
+</span>
+                <button type="button" role="radio" data-z="lower" aria-checked="false">
+                  <span class="led"></span>
+                  <b>                  Low
+</b>
+                </button>
+                <button type="button" role="radio" data-z="all" class="on" aria-checked="true">
+                  <span class="led"></span>
+                  <b>                  All
+</b>
+                </button>
+                <button type="button" role="radio" data-z="upper" aria-checked="false">
+                  <span class="led"></span>
+                  <b>                  Up
+</b>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="sec-body">
+            <div class="fader" data-param="organLevel" data-value="0.7">
+              <span>              Level
+</span>
+            </div>
+            <div class="lpane" data-l="A">
+              <div class="drawbars" id="drawbars">
+              </div>
+            </div>
+            <div class="lpane" data-l="B">
+              <div class="drawbars" id="drawbarsB">
+              </div>
+            </div>
+          </div>
+          <div class="opts">
+            <div class="col">
+              <h3>
+                Model
+              </h3>
+              <div class="lpane" data-l="A">
+                <div class="selector " id="organModel">
+                  <button type="button" data-model="b3" class="on">
+                    <span class="led"></span>
+                    B3
+                  </button>
+                  <button type="button" data-model="vox">
+                    <span class="led"></span>
+                    Vox
+                  </button>
+                  <button type="button" data-model="farf">
+                    <span class="led"></span>
+                    Farf
+                  </button>
+                </div>
+              </div>
+              <div class="lpane" data-l="B">
+                <div class="selector " id="organModelB">
+                  <button type="button" data-model="b3" class="on">
+                    <span class="led"></span>
+                    B3
+                  </button>
+                  <button type="button" data-model="vox">
+                    <span class="led"></span>
+                    Vox
+                  </button>
+                  <button type="button" data-model="farf">
+                    <span class="led"></span>
+                    Farf
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="col">
+              <h3>
+                Percussion
+              </h3>
+              <div class="selector multi" id="percSel">
+                <button type="button" data-perc="on">
+                  <span class="led"></span>
+                  Perc
+                </button>
+                <button type="button" data-perc="third">
+                  <span class="led"></span>
+                  3rd
+                </button>
+                <button type="button" data-perc="fast">
+                  <span class="led"></span>
+                  Fast
+                </button>
+              </div>
+            </div>
+            <div class="col">
+              <h3>
+                Vib / Chorus
+              </h3>
+              <div class="selector " id="vibSel">
+                <button type="button" data-vib="0" class="on">
+                  <span class="led"></span>
+                  Off
+                </button>
+                <button type="button" data-vib="1">
+                  <span class="led"></span>
+                  V
+                </button>
+                <button type="button" data-vib="2">
+                  <span class="led"></span>
+                  C
+                </button>
+              </div>
+            </div>
+          </div>
+          <aside class="amp-col">
+            <h4 class="blk-h amp-h" data-amp-head="organ">
+              <i class="ic" data-icon="amp" data-size="13"></i>
+              Amp
+              <span class="led"></span>
+            </h4>
+            <div class="selector compact" id="amp_organ">
+              <button type="button" data-amp="off" class="on">
+                <span class="led"></span>
+                Off
+              </button>
+              <button type="button" data-amp="clean">
+                <span class="led"></span>
+                Clean
+              </button>
+              <button type="button" data-amp="crunch">
+                <span class="led"></span>
+                Crunch
+              </button>
+              <button type="button" data-amp="tube">
+                <span class="led"></span>
+                Tube
+              </button>
+            </div>
+            <div class="knob sm" data-param="amp.organ.drive" data-value="0.4" data-label="Drive">
+            </div>
+            <div class="knob sm" data-param="fx.organ.send" data-value="0" data-label="FX">
+            </div>
+          </aside>
+          <footer class="sec-foot">
+            <span>            Octave
+</span>
+            <button type="button" class="mini" data-oct="organ:-1" aria-label="Oitava abaixo (organ)">
+              −
+            </button>
+            <span class="seg-sm" data-octv="organ" role="status"></span>
+            <button type="button" class="mini" data-oct="organ:1" aria-label="Oitava acima (organ)">
+              +
+            </button>
+          </footer>
+        </section>
+        <!-- PIANO -->
+        <section class="module m-piano section" data-section="piano" data-focus="A">
+          <header class="sec-head">
+            <h2>
+              Piano
+            </h2>
+            <button type="button" class="btn on-btn on" data-on="piano" aria-pressed="true" aria-label="Piano">
+              <span class="led"></span>
+              <i class="ic" data-icon="power" data-size="12"></i>
+              On
+            </button>
+          </header>
+          <div class="layer-row">
+            <button type="button" class="lbtn" data-lsec="piano" data-layer="A" aria-pressed="false" title="Layer A: clique para editar; clique de novo para ligar/desligar">
+              <span class="led"></span>
+              <b>              A
+</b>
+            </button>
+            <button type="button" class="lbtn" data-lsec="piano" data-layer="B" aria-pressed="false" title="Layer B: clique para editar; clique de novo para ligar/desligar">
+              <span class="led"></span>
+              <b>              B
+</b>
+            </button>
+            <div class="knob xs" data-param="L.piano.B.level" data-value="0.8" data-label="Level" aria-label="Level Canal B" title="Volume do Canal B">
+            </div>
+            <div class="lctl" data-l="A">
+              <div class="lstep">
+                <span>                Oct
+</span>
+                <button type="button" class="mini" data-loct="piano:A:-1" aria-label="Oitava da layer A abaixo">
+                  −
+                </button>
+                <span class="seg-sm" data-loctv="piano:A" role="status"></span>
+                <button type="button" class="mini" data-loct="piano:A:1" aria-label="Oitava da layer A acima">
+                  +
+                </button>
+              </div>
+              <div class="zone" data-zone="piano:A" role="radiogroup" aria-label="Zona da layer A">
+                <span class="zone-t">                Zone
+</span>
+                <button type="button" role="radio" data-z="lower" aria-checked="false">
+                  <span class="led"></span>
+                  <b>                  Low
+</b>
+                </button>
+                <button type="button" role="radio" data-z="all" class="on" aria-checked="true">
+                  <span class="led"></span>
+                  <b>                  All
+</b>
+                </button>
+                <button type="button" role="radio" data-z="upper" aria-checked="false">
+                  <span class="led"></span>
+                  <b>                  Up
+</b>
+                </button>
+              </div>
+            </div>
+            <div class="lctl" data-l="B">
+              <div class="lstep">
+                <span>                Oct
+</span>
+                <button type="button" class="mini" data-loct="piano:B:-1" aria-label="Oitava da layer B abaixo">
+                  −
+                </button>
+                <span class="seg-sm" data-loctv="piano:B" role="status"></span>
+                <button type="button" class="mini" data-loct="piano:B:1" aria-label="Oitava da layer B acima">
+                  +
+                </button>
+              </div>
+              <div class="zone" data-zone="piano:B" role="radiogroup" aria-label="Zona da layer B">
+                <span class="zone-t">                Zone
+</span>
+                <button type="button" role="radio" data-z="lower" aria-checked="false">
+                  <span class="led"></span>
+                  <b>                  Low
+</b>
+                </button>
+                <button type="button" role="radio" data-z="all" class="on" aria-checked="true">
+                  <span class="led"></span>
+                  <b>                  All
+</b>
+                </button>
+                <button type="button" role="radio" data-z="upper" aria-checked="false">
+                  <span class="led"></span>
+                  <b>                  Up
+</b>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="sec-body">
+            <div class="fader" data-param="L.piano.A.level" data-value="0.8" data-label="Level" aria-label="Level Canal A" title="Volume do Canal A">
+              <span>              Level
+</span>
+            </div>
+            <div class="col grow">
+              <ul class="type-list" id="pianoList">
+                <li class="empty">
+                  Solte .sf2, .npno, .nsmp3, .nsmp4 ou .wav aqui
+                </li>
+              </ul>
+              <div class="load-btn-group">
+                <button type="button" class="btn load-btn" id="loadBtn">
+                  <i class="ic" data-icon="piano" data-size="13"></i>
+                  <span id="loadLabel">Load</span>
+                </button>
+                <button type="button" class="btn load-btn remove-btn" id="removeBtn" title="Remover timbre selecionado da lista">
+                  <span class="led"></span>
+                  Remove
+                </button>
+              </div>
+              <input type="file" id="fileInput" accept=".sf2,.npno,.nsmp3,.nsmp4,.wav,.svz,audio/wav,audio/x-wav" multiple="" hidden="" />
+            </div>
+            <div class="col">
+              <div class="inset">
+                <h3>
+                  Dynamics
+                </h3>
+                <div class="selector " id="curveSel">
+                  <button type="button" data-curve="0.6">
+                    <span class="led"></span>
+                    Soft
+                  </button>
+                  <button type="button" data-curve="1" class="on">
+                    <span class="led"></span>
+                    Med
+                  </button>
+                  <button type="button" data-curve="1.6">
+                    <span class="led"></span>
+                    Hard
+                  </button>
+                </div>
+              </div>
+              <div class="inset">
+                <h3>
+                  Timbre
+                </h3>
+                <div class="selector " id="timbreSel">
+                  <button type="button" data-timbre="0" class="on">
+                    <span class="led"></span>
+                    Off
+                  </button>
+                  <button type="button" data-timbre="1">
+                    <span class="led"></span>
+                    Soft
+                  </button>
+                  <button type="button" data-timbre="2">
+                    <span class="led"></span>
+                    Mid
+                  </button>
+                  <button type="button" data-timbre="3">
+                    <span class="led"></span>
+                    Bright
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <aside class="amp-col">
+            <h4 class="blk-h amp-h" data-amp-head="piano">
+              <i class="ic" data-icon="amp" data-size="13"></i>
+              Amp
+              <span class="led"></span>
+            </h4>
+            <div class="selector compact" id="amp_piano">
+              <button type="button" data-amp="off" class="on">
+                <span class="led"></span>
+                Off
+              </button>
+              <button type="button" data-amp="clean">
+                <span class="led"></span>
+                Clean
+              </button>
+              <button type="button" data-amp="crunch">
+                <span class="led"></span>
+                Crunch
+              </button>
+              <button type="button" data-amp="tube">
+                <span class="led"></span>
+                Tube
+              </button>
+            </div>
+            <div class="knob sm" data-param="amp.piano.drive" data-value="0.4" data-label="Drive">
+            </div>
+            <div class="knob sm" data-param="fx.piano.send" data-value="0" data-label="FX">
+            </div>
+          </aside>
+          <footer class="sec-foot">
+            <span>            Octave
+</span>
+            <button type="button" class="mini" data-oct="piano:-1" aria-label="Oitava abaixo (piano)">
+              −
+            </button>
+            <span class="seg-sm" data-octv="piano" role="status"></span>
+            <button type="button" class="mini" data-oct="piano:1" aria-label="Oitava acima (piano)">
+              +
+            </button>
+          </footer>
+        </section>
+        <!-- PROGRAM -->
+        <section class="module m-program">
+          <h2>
+            Program
+          </h2>
+          <div class="prog-top">
+            <div class="seg" id="segNum" role="status">
+            </div>
+            <div class="prog-btns">
+              <button type="button" class="btn" id="importProgBtn" title="Importar banco de presets (JSON)">
+                <span class="led"></span>
+                <i class="ic" data-icon="upload" data-size="11"></i>
+                Import
+              </button>
+              <button type="button" class="btn" id="exportProgBtn" title="Exportar banco de presets (JSON)">
+                <span class="led"></span>
+                <i class="ic" data-icon="download" data-size="11"></i>
+                Export
+              </button>
+              <button type="button" class="btn" id="storeBtn" title="Store: clique para armar a gravação e selecione um slot 1-8">
+                <span class="led"></span>
+                <i class="ic" data-icon="save" data-size="11"></i>
+                Store
+              </button>
+              <button type="button" class="btn" id="sustainBtn">
+                <span class="led"></span>
+                <i class="ic" data-icon="pedal" data-size="11"></i>
+                Sustain
+              </button>
+              <button type="button" class="btn" id="panicBtn">
+                <span class="led"></span>
+                <i class="ic" data-icon="alert" data-size="11"></i>
+                Panic
+              </button>
+            </div>
+            <input type="file" id="importProgFile" accept=".json" hidden />
+          </div>
+          <div class="oled">
+            <div class="oled-status" id="oledStatus" aria-hidden="true">
+            </div>
+            <div class="oled-title" id="oledTitle">
+              LabPiano
+            </div>
+            <div class="oled-line" id="oledLine1">
+              Carregue um SoundFont
+            </div>
+            <div class="oled-line dim" id="oledLine2">
+              FluidSynth 2.4 · WebAssembly
+            </div>
+            <div class="oled-bar">
+              <i id="oledBar"></i>
+            </div>
+          </div>
+          <div class="programs" id="programs">
+          </div>
+          <div class="split-row">
+            <span>            Split
+</span>
+            <button type="button" class="mini arrow" id="splitDown" aria-label="Split abaixo">
+              <i class="ic" data-icon="arrowLeft" data-size="10"></i>
+            </button>
+            <span class="seg-sm wide" id="segSplit" role="status"></span>
+            <button type="button" class="mini arrow" id="splitUp" aria-label="Split acima">
+              <i class="ic" data-icon="arrowRight" data-size="10"></i>
+            </button>
+            <button type="button" class="btn small" id="splitSet" title="Clique e toque a tecla do split">
+              <span class="led"></span>
+              Set
+            </button>
+          </div>
+          <div class="minikeys" id="miniKeys" aria-label="Ponto de split" role="slider" tabindex="0">
+          </div>
+          <footer class="sec-foot">
+            <span>            Transpose
+</span>
+            <button type="button" class="mini arrow" id="transDown" aria-label="Transpose abaixo">
+              <i class="ic" data-icon="arrowLeft" data-size="10"></i>
+            </button>
+            <span class="seg-sm wide" id="segTrans" role="status"></span>
+            <button type="button" class="mini arrow" id="transUp" aria-label="Transpose acima">
+              <i class="ic" data-icon="arrowRight" data-size="10"></i>
+            </button>
+          </footer>
+        </section>
+        <!-- SYNTH / STRINGS MODULE SLOT -->
+        <section class="module m-synth section" data-section="synth" data-focus="A">
+          <header class="sec-head">
+            <div class="syn-tab-selector" role="tablist" aria-label="Abas Synth e Strings">
+              <button type="button" class="syn-tab-btn on" data-syn-tab="synth" role="tab" aria-selected="true">
+                <i class="ic" data-icon="synth" data-size="13"></i>
+                Synth
+              </button>
+              <button type="button" class="syn-tab-btn" data-syn-tab="strings" role="tab" aria-selected="false">
+                <i class="ic" data-icon="strings" data-size="13"></i>
+                Strings
+              </button>
+            </div>
+            <button type="button" class="btn on-btn" data-on="synth" aria-pressed="false" aria-label="Synth">
+              <span class="led"></span>
+              <i class="ic" data-icon="power" data-size="12"></i>
+              On
+            </button>
+            <button type="button" class="btn on-btn" data-on="strings" aria-pressed="false" aria-label="Strings" style="display: none;">
+              <span class="led"></span>
+              <i class="ic" data-icon="power" data-size="12"></i>
+              On
+            </button>
+          </header>
+
+          <!-- ABA 1: SYNTH -->
+          <div class="syn-view-pane on" data-tab-pane="synth">
+            <div class="layer-row">
+              <button type="button" class="lbtn" data-lsec="synth" data-layer="A" aria-pressed="false" title="Layer A: clique para editar; clique de novo para ligar/desligar">
+                <span class="led"></span>
+                <b>A</b>
+              </button>
+              <button type="button" class="lbtn" data-lsec="synth" data-layer="B" aria-pressed="false" title="Layer B: clique para editar; clique de novo para ligar/desligar">
+                <span class="led"></span>
+                <b>B</b>
+              </button>
+              <div class="knob xs" data-param="L.synth.B.level" data-value="0.8" data-label="Level" aria-label="Level Canal B" title="Volume do Canal B">
+              </div>
+              <div class="lctl" data-l="A">
+                <div class="lstep">
+                  <span>Oct</span>
+                  <button type="button" class="mini" data-loct="synth:A:-1" aria-label="Oitava da layer A abaixo">−</button>
+                  <span class="seg-sm" data-loctv="synth:A" role="status"></span>
+                  <button type="button" class="mini" data-loct="synth:A:1" aria-label="Oitava da layer A acima">+</button>
+                </div>
+                <div class="zone" data-zone="synth:A" role="radiogroup" aria-label="Zona da layer A">
+                  <span class="zone-t">Zone</span>
+                  <button type="button" role="radio" data-z="lower" aria-checked="false"><span class="led"></span><b>Low</b></button>
+                  <button type="button" role="radio" data-z="all" class="on" aria-checked="true"><span class="led"></span><b>All</b></button>
+                  <button type="button" role="radio" data-z="upper" aria-checked="false"><span class="led"></span><b>Up</b></button>
+                </div>
+              </div>
+              <div class="lctl" data-l="B">
+                <div class="lstep">
+                  <span>Oct</span>
+                  <button type="button" class="mini" data-loct="synth:B:-1" aria-label="Oitava da layer B abaixo">−</button>
+                  <span class="seg-sm" data-loctv="synth:B" role="status"></span>
+                  <button type="button" class="mini" data-loct="synth:B:1" aria-label="Oitava da layer B acima">+</button>
+                </div>
+                <div class="zone" data-zone="synth:B" role="radiogroup" aria-label="Zona da layer B">
+                  <span class="zone-t">Zone</span>
+                  <button type="button" role="radio" data-z="lower" aria-checked="false"><span class="led"></span><b>Low</b></button>
+                  <button type="button" role="radio" data-z="all" class="on" aria-checked="true"><span class="led"></span><b>All</b></button>
+                  <button type="button" role="radio" data-z="upper" aria-checked="false"><span class="led"></span><b>Up</b></button>
+                </div>
+              </div>
+            </div>
+            <div class="sec-body">
+              <div class="fader" data-param="L.synth.A.level" data-value="0.8" data-label="Level" aria-label="Level Canal A" title="Volume do Canal A">
+                <span>Level</span>
+              </div>
+              <div class="lpane syn-blocks" data-l="A">
+                <div class="syn-blk osc">
+                  <h4 class="blk-h">
+                    <i class="ic" data-icon="osc" data-size="13"></i>
+                    Oscillator
+                  </h4>
+                  <div class="syn-row">
+                    <div class="selector waves" id="oscSel">
+                      <button type="button" data-osc="sawtooth" class="on"><span class="led"></span><i class="ic" data-icon="saw" data-size="13"></i>Saw</button>
+                      <button type="button" data-osc="square"><span class="led"></span><i class="ic" data-icon="square" data-size="13"></i>Pulse</button>
+                      <button type="button" data-osc="triangle"><span class="led"></span><i class="ic" data-icon="triangle" data-size="13"></i>Tri</button>
+                      <button type="button" data-osc="super"><span class="led"></span><i class="ic" data-icon="supersaw" data-size="13"></i>Super</button>
+                      <button type="button" data-osc="sample"><span class="led"></span><i class="ic" data-icon="sample" data-size="13"></i>Sample</button>
+                    </div>
+                    <div class="viz">
+                      <svg data-viz="osc" aria-hidden="true"></svg>
+                    </div>
+                    <div class="knob sm" data-param="detune" data-value="0.3" data-label="Detune"></div>
+                  </div>
+                </div>
+                <div class="syn-blk filter">
+                  <h4 class="blk-h">
+                    <i class="ic" data-icon="filter" data-size="13"></i>
+                    Filter
+                  </h4>
+                  <div class="syn-row">
+                    <div class="viz">
+                      <svg data-viz="filter" aria-hidden="true"></svg>
+                    </div>
+                    <div class="knob md" data-param="cutoff" data-value="0.55" data-label="Cutoff"></div>
+                    <div class="knob md" data-param="reso" data-value="0.2" data-label="Reso"></div>
+                    <div class="knob sm" data-param="fenv" data-value="0.4" data-label="Env"></div>
+                  </div>
+                </div>
+                <div class="syn-blk env">
+                  <h4 class="blk-h">
+                    <i class="ic" data-icon="envelope" data-size="13"></i>
+                    Envelope
+                  </h4>
+                  <div class="syn-row">
+                    <div class="viz">
+                      <svg data-viz="env" aria-hidden="true"></svg>
+                    </div>
+                    <div class="knob xs" data-param="attack" data-value="0.05" data-label="Atk"></div>
+                    <div class="knob xs" data-param="decay" data-value="0.4" data-label="Dec"></div>
+                    <div class="knob xs" data-param="sustain" data-value="0.7" data-label="Sus"></div>
+                    <div class="knob xs" data-param="release" data-value="0.3" data-label="Rel"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="lpane syn-blocks" data-l="B">
+                <div class="syn-blk osc">
+                  <h4 class="blk-h">
+                    <i class="ic" data-icon="osc" data-size="13"></i>
+                    Oscillator
+                  </h4>
+                  <div class="syn-row">
+                    <div class="selector waves" id="oscSelB">
+                      <button type="button" data-osc="sawtooth" class="on"><span class="led"></span><i class="ic" data-icon="saw" data-size="13"></i>Saw</button>
+                      <button type="button" data-osc="square"><span class="led"></span><i class="ic" data-icon="square" data-size="13"></i>Pulse</button>
+                      <button type="button" data-osc="triangle"><span class="led"></span><i class="ic" data-icon="triangle" data-size="13"></i>Tri</button>
+                      <button type="button" data-osc="super"><span class="led"></span><i class="ic" data-icon="supersaw" data-size="13"></i>Super</button>
+                    </div>
+                    <div class="viz">
+                      <svg data-viz="oscB" aria-hidden="true"></svg>
+                    </div>
+                    <div class="knob sm" data-param="B.detune" data-value="0.4" data-label="Detune"></div>
+                  </div>
+                </div>
+                <div class="syn-blk filter">
+                  <h4 class="blk-h">
+                    <i class="ic" data-icon="filter" data-size="13"></i>
+                    Filter
+                  </h4>
+                  <div class="syn-row">
+                    <div class="viz">
+                      <svg data-viz="filterB" aria-hidden="true"></svg>
+                    </div>
+                    <div class="knob md" data-param="B.cutoff" data-value="0.45" data-label="Cutoff"></div>
+                    <div class="knob md" data-param="B.reso" data-value="0.1" data-label="Reso"></div>
+                    <div class="knob sm" data-param="B.fenv" data-value="0.2" data-label="Env"></div>
+                  </div>
+                </div>
+                <div class="syn-blk env">
+                  <h4 class="blk-h">
+                    <i class="ic" data-icon="envelope" data-size="13"></i>
+                    Envelope
+                  </h4>
+                  <div class="syn-row">
+                    <div class="viz">
+                      <svg data-viz="envB" aria-hidden="true"></svg>
+                    </div>
+                    <div class="knob xs" data-param="B.attack" data-value="0.3" data-label="Atk"></div>
+                    <div class="knob xs" data-param="B.decay" data-value="0.5" data-label="Dec"></div>
+                    <div class="knob xs" data-param="B.sustain" data-value="0.8" data-label="Sus"></div>
+                    <div class="knob xs" data-param="B.release" data-value="0.5" data-label="Rel"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <aside class="amp-col">
+              <div class="lpane amp-filter-box" data-l="A">
+                <div class="amp-blk">
+                  <h4 class="blk-h amp-h" data-amp-head="synth:A">
+                    <i class="ic" data-icon="amp" data-size="13"></i>
+                    Amp
+                    <span class="led"></span>
+                  </h4>
+                  <div class="selector compact" id="amp_synth_A">
+                    <button type="button" data-amp="off" class="on"><span class="led"></span>Off</button>
+                    <button type="button" data-amp="clean"><span class="led"></span>Clean</button>
+                    <button type="button" data-amp="crunch"><span class="led"></span>Crunch</button>
+                    <button type="button" data-amp="tube"><span class="led"></span>Tube</button>
+                  </div>
+                  <div class="knob sm" data-param="amp.synth.A.drive" data-value="0.4" data-label="Drive"></div>
+                  <div class="knob sm" data-param="fx.synth.A.send" data-value="0" data-label="FX"></div>
+                </div>
+                <div class="filter-blk">
+                  <h4 class="blk-h">
+                    <i class="ic" data-icon="filter" data-size="13"></i>
+                    Filter
+                  </h4>
+                  <div class="knob sm" data-param="cutoff" data-value="0.55" data-label="Cutoff"></div>
+                </div>
+              </div>
+              <div class="lpane amp-filter-box" data-l="B">
+                <div class="amp-blk">
+                  <h4 class="blk-h amp-h" data-amp-head="synth:B">
+                    <i class="ic" data-icon="amp" data-size="13"></i>
+                    Amp
+                    <span class="led"></span>
+                  </h4>
+                  <div class="selector compact" id="amp_synth_B">
+                    <button type="button" data-amp="off" class="on"><span class="led"></span>Off</button>
+                    <button type="button" data-amp="clean"><span class="led"></span>Clean</button>
+                    <button type="button" data-amp="crunch"><span class="led"></span>Crunch</button>
+                    <button type="button" data-amp="tube"><span class="led"></span>Tube</button>
+                  </div>
+                  <div class="knob sm" data-param="amp.synth.B.drive" data-value="0.4" data-label="Drive"></div>
+                  <div class="knob sm" data-param="fx.synth.B.send" data-value="0" data-label="FX"></div>
+                </div>
+                <div class="filter-blk">
+                  <h4 class="blk-h">
+                    <i class="ic" data-icon="filter" data-size="13"></i>
+                    Filter
+                  </h4>
+                  <div class="knob sm" data-param="B.cutoff" data-value="0.45" data-label="Cutoff"></div>
+                </div>
+              </div>
+            </aside>
+            <footer class="sec-foot">
+              <span>Octave</span>
+              <button type="button" class="mini" data-oct="synth:-1" aria-label="Oitava abaixo (synth)">−</button>
+              <span class="seg-sm" data-octv="synth" role="status"></span>
+              <button type="button" class="mini" data-oct="synth:1" aria-label="Oitava acima (synth)">+</button>
+              <button type="button" class="btn small" id="synthLoadBtn">
+                <span class="led"></span>
+                Load SF2
+              </button>
+              <input type="file" id="synthFileInput" accept=".sf2,.npno,.nsmp3,.nsmp4,.wav,.svz,audio/wav,audio/x-wav" hidden />
+            </footer>
+          </div>
+
+          <!-- ABA 2: STRINGS -->
+          <div class="syn-view-pane" data-tab-pane="strings">
+            <div class="layer-row">
+              <button type="button" class="lbtn" data-lsec="strings" data-layer="A" aria-pressed="false" title="Layer A: clique para editar; clique de novo para ligar/desligar">
+                <span class="led"></span>
+                <b>A</b>
+              </button>
+              <button type="button" class="lbtn" data-lsec="strings" data-layer="B" aria-pressed="false" title="Layer B: clique para editar; clique de novo para ligar/desligar">
+                <span class="led"></span>
+                <b>B</b>
+              </button>
+              <div class="knob xs" data-param="L.strings.B.level" data-value="0.8" data-label="Level" aria-label="Level Canal B" title="Volume do Canal B">
+              </div>
+              <div class="lctl" data-l="A">
+                <div class="lstep">
+                  <span>Oct</span>
+                  <button type="button" class="mini" data-loct="strings:A:-1" aria-label="Oitava da layer A abaixo">−</button>
+                  <span class="seg-sm" data-loctv="strings:A" role="status"></span>
+                  <button type="button" class="mini" data-loct="strings:A:1" aria-label="Oitava da layer A acima">+</button>
+                </div>
+                <div class="zone" data-zone="strings:A" role="radiogroup" aria-label="Zona da layer A">
+                  <span class="zone-t">Zone</span>
+                  <button type="button" role="radio" data-z="lower" aria-checked="false"><span class="led"></span><b>Low</b></button>
+                  <button type="button" role="radio" data-z="all" class="on" aria-checked="true"><span class="led"></span><b>All</b></button>
+                  <button type="button" role="radio" data-z="upper" aria-checked="false"><span class="led"></span><b>Up</b></button>
+                </div>
+              </div>
+              <div class="lctl" data-l="B">
+                <div class="lstep">
+                  <span>Oct</span>
+                  <button type="button" class="mini" data-loct="strings:B:-1" aria-label="Oitava da layer B abaixo">−</button>
+                  <span class="seg-sm" data-loctv="strings:B" role="status"></span>
+                  <button type="button" class="mini" data-loct="strings:B:1" aria-label="Oitava da layer B acima">+</button>
+                </div>
+                <div class="zone" data-zone="strings:B" role="radiogroup" aria-label="Zona da layer B">
+                  <span class="zone-t">Zone</span>
+                  <button type="button" role="radio" data-z="lower" aria-checked="false"><span class="led"></span><b>Low</b></button>
+                  <button type="button" role="radio" data-z="all" class="on" aria-checked="true"><span class="led"></span><b>All</b></button>
+                  <button type="button" role="radio" data-z="upper" aria-checked="false"><span class="led"></span><b>Up</b></button>
+                </div>
+              </div>
+            </div>
+            <div class="sec-body">
+              <div class="fader" data-param="L.strings.A.level" data-value="0.8" data-label="Level" aria-label="Level Canal A" title="Volume do Canal A">
+                <span>Level</span>
+              </div>
+              <div class="col grow">
+                <ul class="type-list" id="stringsList">
+                  <li class="empty">Solte .sf2, .npno, .nsmp3, .nsmp4 ou .wav aqui</li>
+                </ul>
+                <div class="load-btn-group">
+                  <button type="button" class="btn load-btn" id="stringsLoadBtn">
+                    <i class="ic" data-icon="strings" data-size="13"></i>
+                    <span id="stringsLoadLabel">Load</span>
+                  </button>
+                  <button type="button" class="btn load-btn remove-btn" id="stringsRemoveBtn" title="Remover timbre selecionado da lista">
+                    <span class="led"></span>
+                    Remove
+                  </button>
+                </div>
+                <input type="file" id="stringsFileInput" accept=".sf2,.npno,.nsmp3,.nsmp4,.wav,.svz,audio/wav,audio/x-wav" multiple hidden />
+              </div>
+            </div>
+            <aside class="amp-col">
+              <div class="lpane amp-filter-box" data-l="A">
+                <div class="amp-blk">
+                  <h4 class="blk-h amp-h" data-amp-head="strings:A">
+                    <i class="ic" data-icon="amp" data-size="13"></i>
+                    Amp
+                    <span class="led"></span>
+                  </h4>
+                  <div class="selector compact" id="amp_strings_A">
+                    <button type="button" data-amp="off" class="on"><span class="led"></span>Off</button>
+                    <button type="button" data-amp="clean"><span class="led"></span>Clean</button>
+                    <button type="button" data-amp="crunch"><span class="led"></span>Crunch</button>
+                    <button type="button" data-amp="tube"><span class="led"></span>Tube</button>
+                  </div>
+                  <div class="knob sm" data-param="amp.strings.A.drive" data-value="0.4" data-label="Drive"></div>
+                  <div class="knob sm" data-param="fx.strings.A.send" data-value="0" data-label="FX"></div>
+                </div>
+                <div class="filter-blk">
+                  <h4 class="blk-h">
+                    <i class="ic" data-icon="filter" data-size="13"></i>
+                    Filter
+                  </h4>
+                  <div class="knob sm" data-param="L.strings.A.cutoff" data-value="1.0" data-label="Cutoff"></div>
+                </div>
+              </div>
+              <div class="lpane amp-filter-box" data-l="B">
+                <div class="amp-blk">
+                  <h4 class="blk-h amp-h" data-amp-head="strings:B">
+                    <i class="ic" data-icon="amp" data-size="13"></i>
+                    Amp
+                    <span class="led"></span>
+                  </h4>
+                  <div class="selector compact" id="amp_strings_B">
+                    <button type="button" data-amp="off" class="on"><span class="led"></span>Off</button>
+                    <button type="button" data-amp="clean"><span class="led"></span>Clean</button>
+                    <button type="button" data-amp="crunch"><span class="led"></span>Crunch</button>
+                    <button type="button" data-amp="tube"><span class="led"></span>Tube</button>
+                  </div>
+                  <div class="knob sm" data-param="amp.strings.B.drive" data-value="0.4" data-label="Drive"></div>
+                  <div class="knob sm" data-param="fx.strings.B.send" data-value="0" data-label="FX"></div>
+                </div>
+                <div class="filter-blk">
+                  <h4 class="blk-h">
+                    <i class="ic" data-icon="filter" data-size="13"></i>
+                    Filter
+                  </h4>
+                  <div class="knob sm" data-param="L.strings.B.cutoff" data-value="1.0" data-label="Cutoff"></div>
+                </div>
+              </div>
+            </aside>
+            <footer class="sec-foot">
+              <span>Octave</span>
+              <button type="button" class="mini" data-oct="strings:-1" aria-label="Oitava abaixo (strings)">−</button>
+              <span class="seg-sm" data-octv="strings" role="status"></span>
+              <button type="button" class="mini" data-oct="strings:1" aria-label="Oitava acima (strings)">+</button>
+            </footer>
+          </div>
+        </section>
+        <!-- LAYER EFFECTS -->
+        <section class="module m-fx">
+          <h2>
+            Layer Effects
+          </h2>
+          <div class="fx-blocks">
+            <div class="fx-block" data-fx="mod">
+              <h4 class="blk-h">
+                <i class="ic" data-icon="mod" data-size="14"></i>
+                Mod
+                <span class="led"></span>
+              </h4>
+              <div class="fx-row">
+                <div class="selector compact icons" id="modType">
+                  <button type="button" data-mod="tremolo">
+                    <span class="led"></span>
+                    <i class="ic" data-icon="tremolo" data-size="13"></i>
+                    Tremolo
+                  </button>
+                  <button type="button" data-mod="pan">
+                    <span class="led"></span>
+                    <i class="ic" data-icon="pan" data-size="13"></i>
+                    Pan
+                  </button>
+                  <button type="button" data-mod="chorus" class="on">
+                    <span class="led"></span>
+                    <i class="ic" data-icon="chorus" data-size="13"></i>
+                    Chorus
+                  </button>
+                  <button type="button" data-mod="flanger">
+                    <span class="led"></span>
+                    <i class="ic" data-icon="flanger" data-size="13"></i>
+                    Flanger
+                  </button>
+                  <button type="button" data-mod="phaser">
+                    <span class="led"></span>
+                    <i class="ic" data-icon="phaser" data-size="13"></i>
+                    Phaser
+                  </button>
+                </div>
+                <div class="fx-right">
+                  <div class="fx-knobs">
+                    <div class="knob sm" data-param="modRate" data-value="0.35" data-label="Rate">
+                    </div>
+                    <div class="knob sm" data-param="modAmount" data-value="0.5" data-label="Amount">
+                    </div>
+                  </div>
+                  <div class="viz">
+                    <svg data-viz="mod" aria-hidden="true"></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="fx-block" data-fx="delay">
+              <h4 class="blk-h">
+                <i class="ic" data-icon="delay" data-size="14"></i>
+                Delay
+                <span class="led"></span>
+              </h4>
+              <div class="fx-row">
+                <div class="selector compact icons" id="delayMode">
+                  <button type="button" data-dmode="mono">
+                    <span class="led"></span>
+                    <i class="ic" data-icon="mono" data-size="13"></i>
+                    Mono
+                  </button>
+                  <button type="button" data-dmode="pingpong" class="on">
+                    <span class="led"></span>
+                    <i class="ic" data-icon="pingpong" data-size="13"></i>
+                    Ping-Pong
+                  </button>
+                  <button type="button" data-dmode="tape">
+                    <span class="led"></span>
+                    <i class="ic" data-icon="tape" data-size="13"></i>
+                    Tape
+                  </button>
+                </div>
+                <div class="fx-right">
+                  <div class="fx-knobs">
+                    <div class="knob sm" data-param="delay" data-value="0" data-label="Send">
+                    </div>
+                    <div class="knob sm" data-param="delayTime" data-value="0.4" data-label="Time">
+                    </div>
+                    <div class="knob sm" data-param="delayFeedback" data-value="0.4" data-label="Feedback">
+                    </div>
+                  </div>
+                  <div class="viz">
+                    <svg data-viz="delay" aria-hidden="true"></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="fx-block" data-fx="reverb">
+              <h4 class="blk-h">
+                <i class="ic" data-icon="reverb" data-size="14"></i>
+                Reverb
+                <span class="led"></span>
+              </h4>
+              <div class="fx-row">
+                <div class="selector compact icons" id="reverbType">
+                  <button type="button" data-rtype="room">
+                    <span class="led"></span>
+                    <i class="ic" data-icon="room" data-size="13"></i>
+                    Room
+                  </button>
+                  <button type="button" data-rtype="stage" class="on">
+                    <span class="led"></span>
+                    <i class="ic" data-icon="stage" data-size="13"></i>
+                    Stage
+                  </button>
+                  <button type="button" data-rtype="hall">
+                    <span class="led"></span>
+                    <i class="ic" data-icon="hall" data-size="13"></i>
+                    Hall
+                  </button>
+                  <button type="button" data-rtype="plate">
+                    <span class="led"></span>
+                    <i class="ic" data-icon="plate" data-size="13"></i>
+                    Plate
+                  </button>
+                  <button type="button" data-rtype="spring">
+                    <span class="led"></span>
+                    <i class="ic" data-icon="spring" data-size="13"></i>
+                    Spring
+                  </button>
+                </div>
+                <div class="fx-right">
+                  <div class="fx-knobs">
+                    <div class="knob sm" data-param="reverb" data-value="0.25" data-label="Send">
+                    </div>
+                    <div class="knob sm" data-param="reverbSize" data-value="0.5" data-label="Size">
+                    </div>
+                    <div class="knob sm" data-param="reverbTone" data-value="0.5" data-label="Tone">
+                    </div>
+                  </div>
+                  <div class="viz">
+                    <svg data-viz="reverb" aria-hidden="true"></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="fx-block" data-fx="eq">
+              <h4 class="blk-h">
+                <i class="ic" data-icon="eq" data-size="14"></i>
+                EQ · Comp
+                <span class="led"></span>
+              </h4>
+              <div class="fx-row">
+                <div class="fx-right">
+                  <div class="fx-knobs">
+                    <div class="knob sm" data-param="chorus" data-value="0" data-label="Chorus">
+                    </div>
+                    <div class="knob sm" data-param="bass" data-value="0.5" data-label="Bass">
+                    </div>
+                    <div class="knob sm" data-param="mid" data-value="0.5" data-label="Mid">
+                    </div>
+                    <div class="knob sm" data-param="treble" data-value="0.5" data-label="Treble">
+                    </div>
+                    <div class="knob sm" data-param="comp" data-value="0" data-label="Comp">
+                    </div>
+                  </div>
+                  <div class="viz">
+                    <svg data-viz="eq" aria-hidden="true"></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <!-- PADS e PERFORMANCE: só no layout Workstation (css/fantom.css, js/workstation.js). -->
+        <section class="module m-pads" aria-label="Pads">
+          <h2>
+            Pads
+            <button type="button" class="btn small pad-assign" id="padAssign" aria-pressed="false" title="Ligue e toque num pad para trocar a amostra">
+              <span class="led"></span>
+              Assign
+            </button>
+          </h2>
+          <div class="pad-mode" id="padMode" aria-label="Modo dos pads">
+            <button type="button" data-pmode="sample">
+              <span class="led"></span>
+              Sample
+            </button>
+            <button type="button" data-pmode="note">
+              <span class="led"></span>
+              Note
+            </button>
+            <button type="button" data-pmode="zone">
+              <span class="led"></span>
+              Zone
+            </button>
+            <button type="button" data-pmode="step">
+              <span class="led"></span>
+              Step
+            </button>
+          </div>
+          <div class="pads" id="pads">
+          </div>
+        </section>
+        <section class="module m-perf" aria-label="Performance">
+          <div class="perf-blk perf-tempo">
+            <h4 class="blk-h">
+              Tempo
+            </h4>
+            <div class="perf-row">
+              <button type="button" class="mini" id="tempoDown" aria-label="Tempo abaixo">
+                −
+              </button>
+              <span class="seg-sm wide" id="segTempo" role="status"></span>
+              <button type="button" class="mini" id="tempoUp" aria-label="Tempo acima">
+                +
+              </button>
+              <button type="button" class="btn small" id="tapBtn">
+                <span class="led"></span>
+                Tap
+              </button>
+            </div>
+          </div>
+          <div class="perf-blk perf-arp">
+            <h4 class="blk-h">
+              Arpeggio
+            </h4>
+            <div class="perf-row">
+              <button type="button" class="btn small" id="arpBtn" aria-pressed="false">
+                <span class="led"></span>
+                On
+              </button>
+              <div class="perf-sel" id="arpType" aria-label="Direção do arpejo">
+                <button type="button" data-arp="up">
+                  Up
+                </button>
+                <button type="button" data-arp="down">
+                  Down
+                </button>
+                <button type="button" data-arp="updn">
+                  Up/Dn
+                </button>
+                <button type="button" data-arp="rnd">
+                  Rnd
+                </button>
+              </div>
+              <div class="perf-sel" id="arpRate" aria-label="Divisão do arpejo">
+                <button type="button" data-rate="8">
+                  1/8
+                </button>
+                <button type="button" data-rate="16">
+                  1/16
+                </button>
+                <button type="button" data-rate="8t">
+                  1/8T
+                </button>
+              </div>
+              <div class="perf-sel" id="arpOct" aria-label="Oitavas do arpejo">
+                <button type="button" data-oct="1">
+                  1 Oct
+                </button>
+                <button type="button" data-oct="2">
+                  2
+                </button>
+                <button type="button" data-oct="3">
+                  3
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="perf-blk perf-chord">
+            <h4 class="blk-h">
+              Chord
+            </h4>
+            <div class="perf-row">
+              <button type="button" class="btn small" id="chordBtn" aria-pressed="false">
+                <span class="led"></span>
+                On
+              </button>
+              <div class="perf-sel" id="chordType" aria-label="Tipo de acorde">
+                <button type="button" data-chord="maj">
+                  Maj
+                </button>
+                <button type="button" data-chord="min">
+                  Min
+                </button>
+                <button type="button" data-chord="dom7">
+                  7
+                </button>
+                <button type="button" data-chord="min7">
+                  m7
+                </button>
+                <button type="button" data-chord="sus4">
+                  Sus4
+                </button>
+                <button type="button" data-chord="pow">
+                  5th
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="perf-blk perf-seq">
+            <h4 class="blk-h">
+              Step Sequencer
+            </h4>
+            <div class="perf-row">
+              <button type="button" class="btn small" id="seqPlay" aria-pressed="false" title="Toca os 16 passos no tempo">
+                <span class="led"></span>
+                Play
+              </button>
+              <button type="button" class="btn small" id="seqRec" aria-pressed="false" title="Ligado: cada nota tocada grava no passo marcado e avança">
+                <span class="led"></span>
+                Rec
+              </button>
+              <button type="button" class="mini" id="seqClear" title="Apagar os passos">
+                Clr
+              </button>
+              <div class="steps" id="steps" role="group" aria-label="Passos">
+              </div>
+            </div>
+          </div>
+        </section>
+        <div class="tools">
+          <button type="button" class="btn" id="skinBtn" title="Trocar o layout do painel">
+            <span class="led"></span>
+            Layout
+            <b id="skinName">            Stage
+</b>
+          </button>
+          <button type="button" class="btn" id="midiBtn" aria-pressed="false" title="MIDI Learn: clique num controle e mexa no controlador (ou clique direito num controle)">
+            <span class="led"></span>
+            <i class="ic" data-icon="midi" data-size="13"></i>
+            MIDI
+          </button>
+          <button type="button" class="btn" id="fsBtn" aria-label="Tela cheia" title="Tela cheia">
+            <i class="ic" data-icon="fullscreen" data-size="13"></i>
+            Tela cheia
+          </button>
+        </div>
+        <div class="wordmark">
+          <span class="wm-name">          labpiano
+</span>
+          <span class="wm-sub">          Organ · Piano · Synth
+</span>
+          <span class="wm-ver" title="Versão do LabPiano (a mesma do app nativo)">          v0.1.0
+</span>
+        </div>
+      </div>
+      <div class="keybed">
+        <div class="wheels" id="wheels">
+        </div>
+        <div class="keys-wrap">
+          <div class="felt">
+          </div>
+          <div class="keyboard" id="keyboard">
+          </div>
+          <div class="split-mark" id="splitMark" hidden="">
+            <b>            Split
+</b>
+          </div>
+        </div>
+      </div>
+    </main>
+    <dialog class="padlib" id="padLib" aria-labelledby="libTitle">
+      <header class="lib-head">
+        <h3 id="libTitle">
+          Biblioteca de amostras
+          <em id="libPad">          Pad 1
+</em>
+        </h3>
+        <button type="button" class="mini" id="libClose" aria-label="Fechar">
+          ✕
+        </button>
+      </header>
+      <div class="lib-bar">
+        <input type="search" id="libQ" placeholder="Buscar (kick, snare, loop 90…)" aria-label="Buscar amostra" />
+        <select id="libCat" aria-label="Categoria">
+          <option value="">
+            Todas as categorias
+          </option>
+        </select>
+        <div class="perf-sel" id="libTipo" aria-label="Tipo">
+          <button type="button" data-tipo="">
+            Todas
+          </button>
+          <button type="button" data-tipo="pad">
+            One-shot
+          </button>
+          <button type="button" data-tipo="loop">
+            Loop
+          </button>
+        </div>
+        <span class="lib-count" id="libCount"></span>
+      </div>
+      <ul class="lib-list" id="libList">
+      </ul>
+      <footer class="lib-foot">
+        <button type="button" class="btn small" id="libFileBtn">
+          Arquivo do computador…
+        </button>
+        <input type="file" id="libFile" accept="audio/*,.wav,.mp3,.aif,.aiff,.flac,.ogg" hidden="" />
+        <button type="button" class="btn small" id="libClear" hidden="">
+          Esvaziar pad
+        </button>
+        <a href="/biblioteca-amostras" rel="noopener" target="_blank">        Ver a biblioteca completa ↗
+</a>
+      </footer>
+    </dialog>
+    <dialog class="audio-midi-dialog" id="audioMidiModal" aria-labelledby="amTitle">
+      <div class="am-chassis">
+        <header class="am-head">
+          <div class="am-head-title">
+            <i class="ic" data-icon="gear" data-size="16"></i>
+            <h2 id="amTitle">Configurações Áudio &amp; MIDI</h2>
+          </div>
+          <button type="button" class="mini am-close" id="amCloseBtn" aria-label="Fechar configurações">✕</button>
+        </header>
+
+        <div class="am-body">
+          <!-- SEÇÃO 1: MIDI IN / OUT / MONITOR -->
+          <section class="am-section">
+            <div class="am-sec-h">
+              <i class="ic" data-icon="midi" data-size="14"></i>
+              <h3>Dispositivos MIDI (Entrada &amp; Saída)</h3>
+            </div>
+            <div class="am-grid-2">
+              <div class="am-field">
+                <label for="amMidiIn">Controlador / Entrada MIDI (MIDI IN)</label>
+                <select id="amMidiIn" class="am-select">
+                  <option value="all">Todos os Dispositivos (Omni)</option>
+                </select>
+                <span class="am-hint">Selecione o teclado controlador conectado via USB/MIDI.</span>
+              </div>
+              <div class="am-field">
+                <label for="amMidiChannel">Canal MIDI de Recepção</label>
+                <select id="amMidiChannel" class="am-select">
+                  <option value="all">Todos os Canais (Omni)</option>
+                  <option value="1">Canal 1</option>
+                  <option value="2">Canal 2</option>
+                  <option value="3">Canal 3</option>
+                  <option value="4">Canal 4</option>
+                  <option value="5">Canal 5</option>
+                  <option value="6">Canal 6</option>
+                  <option value="7">Canal 7</option>
+                  <option value="8">Canal 8</option>
+                  <option value="9">Canal 9</option>
+                  <option value="10">Canal 10</option>
+                  <option value="11">Canal 11</option>
+                  <option value="12">Canal 12</option>
+                  <option value="13">Canal 13</option>
+                  <option value="14">Canal 14</option>
+                  <option value="15">Canal 15</option>
+                  <option value="16">Canal 16</option>
+                </select>
+                <span class="am-hint">Filtro de canal ou recepção em todos (Omni).</span>
+              </div>
+            </div>
+
+            <div class="am-grid-2" style="margin-top: 10px;">
+              <div class="am-field">
+                <label for="amMidiOut">Porta de Saída MIDI (MIDI OUT)</label>
+                <select id="amMidiOut" class="am-select">
+                  <option value="none">Desativada (Nenhuma)</option>
+                </select>
+                <span class="am-hint">Porta para automação externa ou MIDI Thru.</span>
+              </div>
+              <div class="am-field am-thru-field">
+                <label class="am-check-label">
+                  <input type="checkbox" id="amMidiThru" />
+                  <span>Ativar MIDI Thru (repassar notas e controles à saída)</span>
+                </label>
+                <div class="am-btn-row" style="margin-top: 6px;">
+                  <button type="button" class="btn small" id="amLearnBtn" title="Mapear botões e knobs no painel">
+                    <span class="led"></span>
+                    Mapear MIDI Learn
+                  </button>
+                  <button type="button" class="btn small" id="amPanicBtn" title="Cortar notas presas">
+                    <span class="led"></span>
+                    Pânico (All Notes Off)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Monitor de Atividade MIDI -->
+            <div class="am-monitor-box">
+              <span class="am-act-led" id="amMidiActLed"></span>
+              <span class="am-monitor-label">Atividade MIDI:</span>
+              <span class="am-monitor-msg" id="amMidiMonitorMsg">Aguardando eventos MIDI...</span>
+            </div>
+          </section>
+
+          <!-- SEÇÃO 2: SAÍDA DE ÁUDIO -->
+          <section class="am-section">
+            <div class="am-sec-h">
+              <i class="ic" data-icon="master" data-size="14"></i>
+              <h3>Dispositivo de Saída de Áudio</h3>
+            </div>
+            <div class="am-grid-2">
+              <div class="am-field">
+                <label for="amAudioOut">Interface / Placa de Saída de Áudio</label>
+                <select id="amAudioOut" class="am-select">
+                  <option value="default">Saída Padrão do Sistema</option>
+                </select>
+                <span class="am-hint" id="amAudioStatusMsg">Dispositivo ativo.</span>
+              </div>
+              <div class="am-field am-test-field">
+                <label>Diagnóstico e Teste</label>
+                <div class="am-btn-row">
+                  <button type="button" class="btn small am-test-btn" id="amTestAudioBtn" title="Tocar acorde de teste">
+                    <span class="led"></span>
+                    🔊 Tocar Som de Teste
+                  </button>
+                  <button type="button" class="btn small" id="amResumeAudioBtn" title="Reiniciar motor de áudio">
+                    Reiniciar Áudio
+                  </button>
+                </div>
+                <span class="am-hint">Confira se o som sai nos fones ou monitores corretos.</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- SEÇÃO 3: QUANTIDADE DE AMOSTRAS / BUFFER SIZE & LATÊNCIA -->
+          <section class="am-section">
+            <div class="am-sec-h">
+              <i class="ic" data-icon="envelope" data-size="14"></i>
+              <h3>Quantidade de Amostras (Buffer Size) &amp; Latência</h3>
+            </div>
+            <p class="am-sec-desc">
+              Tamanhos menores (64 / 128) entregam resposta instantânea às teclas do controlador MIDI. Tamanhos maiores (512 / 1024) evitam dropouts em computadores mais lentos.
+            </p>
+            <div class="am-buffer-grid" id="amBufferGrid">
+              <!-- Renderizado dinamicamente por audiomidi.js -->
+            </div>
+
+            <!-- Diagnósticos do Motor de Áudio -->
+            <div class="am-diagnostics">
+              <div class="am-diag-item">
+                <span class="diag-label">Sample Rate</span>
+                <b class="diag-val" id="amSrVal">48.000 Hz</b>
+              </div>
+              <div class="am-diag-item">
+                <span class="diag-label">Latência Estimada</span>
+                <b class="diag-val" id="amLatVal">~5.3 ms</b>
+              </div>
+              <div class="am-diag-item">
+                <span class="diag-label">Buffer Atual</span>
+                <b class="diag-val" id="amBufferVal">128 amostras</b>
+              </div>
+              <div class="am-diag-item">
+                <span class="diag-label">Estado do Motor</span>
+                <b class="diag-val" id="amEngineStateVal">Ativo (Running)</b>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <footer class="am-foot">
+          <span class="am-save-notice">✓ Configurações salvas automaticamente no navegador</span>
+          <button type="button" class="btn am-done-btn" id="amDoneBtn">Concluir</button>
+        </footer>
+      </div>
+    </dialog>
+    <div class="drop" id="drop">
+      <p>
+        Solte arquivos .sf2, .npno, .nsmp3, .nsmp4, .wav ou .svz
+      </p>
+    </div>
+    <div class="load-banner" id="loadBanner" role="status" aria-live="assertive" hidden="">
+      <strong id="loadBannerTitle">      Preparando o piano
+</strong>
+      <span id="loadBannerDetail">      Espere o arquivo carregar para ouvir
+</span>
+      <div class="load-banner-track">
+        <i id="loadBannerBar"></i>
+      </div>
+      <b id="loadBannerPct">      0%
+</b>
+      <button type="button" id="loadBannerClose" hidden="">
+        Fechar
+      </button>
+    </div>
+    <script src="vendor/js-synthesizer.min.js">
+    </script>
+    <script type="module" src="js/app.js">
+    </script>
+    <script type="module" src="js/visuals.js">
+    </script>
+  </body>
+</html>

@@ -1,0 +1,305 @@
+/* LabPiano v4 — painel do app nativo (Source/PluginEditor.cpp, layout()).
+   Palco fixo de 1600 × 840 escalado com `zoom` (app.js: fitStage), como o setTransform do nativo.
+   Abaixo de ~1000 px (ou em tela baixa) continua o layout em faixas/abas do app.css. */
+:root {
+  --chassis: #c4191c;
+  --light: #c5ccd4;
+  --light-lo: #aab3bd;
+  --ink: #e4e7eb;
+  --ink-dim: #98a0a9;
+  --ink-dark: #1d2126;
+  --led: #ff3322;
+  --led-off: #3d1210;
+  --blk: var(--light);
+  --blk-hi: #d6dce3;
+  --blk-lo: var(--light-lo);
+  --blk-ink: var(--ink-dark);
+  --well: inset 0 1px 3px #0008, 0 1px 0 #ffffff12;
+}
+.ic { display: inline-block; flex: none; vertical-align: middle; }
+svg.ic { overflow: visible; }
+
+/* ---------- Componentes (valem em qualquer largura) ---------- */
+/* Layer em foco: só os controles dela aparecem, como o nativo troca os componentes. */
+.section[data-focus="A"] [data-l="B"], .section[data-focus="B"] [data-l="A"] { display: none !important; }
+.section [data-l] { animation: pane-in .22s cubic-bezier(.2, .8, .3, 1); }
+@keyframes pane-in { from { opacity: 0; transform: translateY(3px); } }
+
+.knob.xs { width: 36px; }
+.knob.xs .wrap { --r: 14px; --skirt: 7px; --cap: 10px; width: 36px; height: 36px; }
+.knob.xs .ring i { width: 3px; height: 3px; margin: -1.5px 0 0 -1.5px; }
+.knob.md { width: 58px; }
+.knob.md .wrap { --r: 23px; --skirt: 11px; --cap: 15px; width: 56px; height: 56px; }
+
+/* Linha de layer: A/B, nível, oitava e zona numa caixa escura. */
+.layer-row {
+  display: flex; align-items: center; gap: 6px; min-height: 50px; padding: 2px 6px; flex: none;
+  border-radius: 6px; background: #0000002e; box-shadow: var(--well);
+}
+.layer-row > .knob { flex: none; }
+.lbtn {
+  position: relative; width: 34px; height: 44px; flex: none; border: 0; border-radius: 5px; padding: 6px 0 0;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: linear-gradient(180deg, #54575d 0, #3c3f44 45%, #313338 100%); color: var(--ink);
+  box-shadow: 0 0 0 1px #0a0a0b, 0 2px 0 1px #0a0a0b, 0 3px 5px #000a, inset 0 1px 0 #ffffff33, inset 0 -2px 2px #0005;
+  transition: transform .08s, box-shadow .15s, filter .12s;
+}
+.lbtn b { font: 700 16px/1 var(--font); transition: opacity .15s; }
+.lbtn:hover { filter: brightness(1.1); }
+.lbtn:active { transform: translateY(2px); }
+.lbtn.focus { box-shadow: 0 0 0 1px #0a0a0b, 0 0 0 2.5px #e8ecf0, 0 2px 0 2px #0a0a0b, 0 4px 8px #000a, inset 0 1px 0 #ffffff33; }
+.lbtn.on .led {
+  background: radial-gradient(circle at 40% 35%, #fff0ea 0, #ff7a5c 22%, var(--led) 55%, #c0120a 100%);
+  box-shadow: 0 0 0 1.5px #0b0b0c, var(--led-glow); animation: led-on .32s cubic-bezier(.2, .9, .3, 1.4);
+}
+.lbtn:not(.on) b { opacity: .55; }
+.lctl { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; }
+.lstep { display: flex; align-items: center; gap: 4px; font: 700 10px/1 var(--font); letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink-dim); }
+.lstep > span:first-child { margin-right: 2px; }
+.zone { display: grid; grid-template-columns: repeat(3, auto); column-gap: 3px; align-items: center; }
+.zone-t { grid-column: 1 / -1; font: 700 8px/1 var(--font); letter-spacing: 1.4px; text-transform: uppercase; color: var(--ink-dim); text-align: center; margin-bottom: 3px; }
+.zone button { border: 0; background: none; padding: 0 2px; display: flex; flex-direction: column; align-items: center; gap: 3px; color: #c9ced4; }
+.zone button b { font: 700 9px/1 var(--font); letter-spacing: .8px; text-transform: uppercase; }
+.zone button:hover, .zone button.on { color: #fff; }
+
+/* Ilhas claras: coluna Amp/FX, blocos do Synth e dos efeitos. */
+.amp-col, .syn-blk, .fx-block {
+  border-radius: 6px; color: var(--ink-dark);
+  background: linear-gradient(180deg, var(--blk-hi), var(--light) 40%, var(--light-lo));
+  box-shadow: inset 0 1px 0 #ffffffaa, inset 0 -1px 0 #0003, 0 2px 4px #0006, 0 0 0 1px #0008;
+}
+.amp-col { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 4px; }
+.amp-filter-box { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; height: 100%; justify-content: space-between; }
+.amp-blk, .filter-blk { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 100%; }
+.filter-blk { border-top: 1px solid #0000002b; padding-top: 4px; margin-top: 2px; box-shadow: inset 0 1px 0 #ffffff88; width: 100%; }
+.syn-blk, .fx-block { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 5px 7px 6px; min-width: 0; }
+:is(.amp-col, .syn-blk, .fx-block) .knob { color: #2c333c; }
+:is(.amp-col, .syn-blk, .fx-block) .knob span { font-weight: 700; }
+.blk-h { display: flex; align-items: center; gap: 5px; margin: 0; font: 700 10.5px/1 var(--font); letter-spacing: 1.6px; text-transform: uppercase; color: var(--ink-dark); }
+.blk-h::before { display: none; }
+.blk-h .led { margin-left: auto; }
+.amp-h { width: 100%; padding: 0 2px; }
+.amp-h.on .led, .fx-block.on .blk-h .led {
+  background: radial-gradient(circle at 40% 35%, #fff0ea 0, #ff7a5c 22%, var(--led) 55%, #c0120a 100%);
+  box-shadow: 0 0 0 1.5px #0b0b0c, 0 0 6px 2px #ff2b17cc, 0 0 16px 4px #ff2b1755;
+}
+.selector.compact { gap: 0; }
+.selector.compact button:not(.rubber) { padding: 1px 4px 1px 1px; gap: 5px; font: 700 10px/1.3 var(--font); letter-spacing: .9px; color: #39414b; }
+.selector.compact button:not(.rubber):hover { color: #000; background: #0000000d; }
+.selector.compact button.on { color: #000; }
+.selector.compact .cycle { display: none; }
+.selector.icons button .ic { opacity: .8; }
+
+.syn-row, .fx-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.fx-right { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.fx-knobs { display: flex; justify-content: space-around; }
+:is(.syn-blk, .fx-block) .viz { flex: 1; min-width: 0; height: 52px; }
+.syn-blocks { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+/* Ondas: botões de borracha com ícone e LED (os botões 2×2 do nativo). */
+.selector.waves, .m-synth #oscSel { display: grid; grid-template-columns: repeat(2, 38px); gap: 4px; flex: none; align-items: start; }
+.m-synth .selector.waves button:not(.rubber) {
+  position: relative; width: 38px; height: 20px; padding: 0 0 0 5px; gap: 4px; justify-content: flex-start;
+  font-size: 0; color: #e9edf2; border-radius: 4px;
+  background: linear-gradient(180deg, #54575d, #3a3d42 50%, #2f3136);
+  box-shadow: 0 0 0 1px #0a0a0b, 0 2px 0 1px #0a0a0b, inset 0 1px 0 #ffffff33;
+}
+.m-synth .selector.waves button::after { display: none; }
+.m-synth .selector.waves button .led { position: static; width: 5px; height: 5px; margin: 0; }
+.m-synth .selector.waves button.on { box-shadow: 0 0 0 1px #ff3b2a, 0 2px 0 1px #0a0a0b, 0 0 10px #ff2b1766, inset 0 1px 0 #ffffff33; }
+.selector.waves .cycle { display: none; }
+
+/* Lista de pianos: tag SF2/NORD como no nativo. */
+.type-list .tg { font: 700 8px/1 var(--font); font-style: normal; letter-spacing: .8px; padding: 2px 4px; border-radius: 2px; color: #9aa3ad; box-shadow: inset 0 0 0 1px #ffffff26; }
+.type-list .tg.nord { color: #ff8a73; box-shadow: inset 0 0 0 1px #ff5a3c66; }
+.type-list .tg.fantom { color: #ff7ad9; box-shadow: inset 0 0 0 1px #e0409f66; }
+.type-list .tg.wav { color: #6ee7b7; box-shadow: inset 0 0 0 1px #34d39966; }
+
+/* Program */
+.prog-top { display: flex; gap: 6px; align-items: stretch; min-width: 0; }
+.prog-top .seg { flex: none; min-width: 82px; padding: 4px 6px; }
+.prog-btns { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 4px; }
+.prog-btns .btn {
+  justify-content: flex-start;
+  padding: 2px 4px;
+  gap: 3px;
+  font-size: 8.5px;
+  letter-spacing: 0.5px;
+  min-height: 18px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+}
+.prog-btns .btn .ic { flex: none; width: 11px; height: 11px; }
+.programs .btn.prog { flex-direction: column; gap: 3px; height: 38px; padding: 4px 0 3px; }
+.programs .btn.prog b { font: 700 14px/1 var(--font); }
+.programs .btn.prog .slot { width: 14px; height: 2px; border-radius: 1px; background: #ffffff1a; }
+.programs .btn.prog.saved .slot { background: #ffffff88; }
+.oled-status { display: flex; gap: 9px; margin-bottom: 3px; font: 10px/1 var(--mono); min-height: 12px; }
+.oled-status .st { display: inline-flex; align-items: center; gap: 2px; opacity: .3; transition: opacity .2s; }
+.oled-status .st.on { opacity: 1; }
+.oled-status b { font-weight: 400; opacity: .35; }
+.oled-status b.on { opacity: 1; }
+.oled-title.swap { animation: oled-swap .35s ease-out; }
+@keyframes oled-swap { from { opacity: 0; transform: translateX(6px); filter: blur(1px); } }
+.split-row { display: flex; align-items: center; gap: 5px; font: 700 11px/1 var(--font); letter-spacing: 1.3px; text-transform: uppercase; color: var(--ink-dim); }
+.split-row > span:first-child { margin-right: 2px; }
+.split-row .btn { margin-left: auto; }
+.seg-sm.wide { min-width: 44px; }
+#splitSet.armed { animation: arm-blink .5s steps(2, jump-none) infinite; }
+@keyframes arm-blink { 50% { filter: brightness(1.4); } }
+#panicBtn.flash .led { animation: panic-flash .3s steps(2, jump-none) 6; }
+@keyframes panic-flash { 0% { background: var(--led); box-shadow: 0 0 0 1.5px #0b0b0c, var(--led-glow); } }
+.minikeys {
+  --split: .43; position: relative; display: flex; align-items: flex-start; height: 18px; flex: none; border-radius: 2px; overflow: hidden; cursor: pointer;
+  background: #d9dde2; box-shadow: 0 0 0 1px #000, 0 1px 0 1px #ffffff12;
+}
+.minikeys i { flex: 1; height: 100%; }
+.minikeys i.w { background: #d9dde2; box-shadow: inset -1px 0 0 #8a9099; transition: background .15s; }
+.minikeys i.b { flex: .6; height: 60%; margin: 0 -.3%; background: #1a1b1e; z-index: 1; }
+.minikeys i.w.upper { background: #f0cdc6; }
+.minikeys i:hover { filter: brightness(.85); }
+.minikeys .mk-mark {
+  position: absolute; top: 0; bottom: 0; left: calc(var(--split) * 100%); width: 2px; margin-left: -1px; z-index: 2;
+  background: var(--led); box-shadow: 0 0 6px 1px #ff2b17cc; transition: left .15s cubic-bezier(.2, .8, .3, 1);
+}
+.minikeys:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.keys-wrap { position: relative; }
+.split-mark {
+  position: absolute; top: 0; bottom: 0; width: 2px; margin-left: 5px; z-index: 6; pointer-events: none;
+  background: linear-gradient(180deg, var(--led), #ff331f22); box-shadow: 0 0 8px 1px #ff2b17aa;
+  transition: left .15s cubic-bezier(.2, .8, .3, 1);
+}
+.split-mark b { position: absolute; top: 12px; left: 4px; font: 700 9px/1 var(--font); letter-spacing: 1.2px; text-transform: uppercase; color: #fff; background: #c4191cdd; padding: 2px 4px; border-radius: 2px; }
+.split-mark[hidden] { display: none; }
+.sample-row .lcd { cursor: pointer; }
+
+/* ---------- Palco nativo 1600 × 840 ---------- */
+.stage .instrument {
+  width: 1600px; height: 840px; max-width: none; margin: 10px auto 0; padding: 0;
+  zoom: var(--stage-zoom, 1);
+  background: var(--grain), var(--ws-chassis-bg, linear-gradient(180deg, #de3a33 0, var(--chassis) 6%, #bb171a 55%, #a51416 100%));
+  background-blend-mode: soft-light, normal;
+  transition: background 0.3s ease;
+}
+.stage .instrument::before, .stage .instrument::after { width: 16px; }
+.stage .panel { position: absolute; inset: 0; display: block; padding: 0; overflow: visible; }
+.stage .module { position: absolute; top: 20px; height: 430px; margin: 0; padding: 10px 12px 12px; gap: 8px; min-width: 0; flex: none; }
+.stage .m-master { left: 26px; width: 92px; padding: 8px 0 0; align-items: center; gap: 12px; }
+.stage .m-organ { left: 130px; width: 376px; }
+.stage .m-piano { left: 518px; width: 376px; }
+.stage .m-program { left: 906px; width: 280px; }
+.stage .m-synth { left: 1198px; width: 376px; }
+.stage .m-fx { top: 456px; left: 135px; width: 1051px; height: 192px; padding: 10px 16px 12px; }
+.stage .wordmark { position: absolute; top: 462px; left: 1218px; width: 356px; height: 186px; padding: 0 2px 4px; }
+.stage .wm-name { font: 300 64px/1 var(--font); letter-spacing: -1.4px; }
+.stage .wm-sub { font-size: 12px; letter-spacing: 3.6px; }
+
+/* Títulos dentro da ilha (como o nativo): nome à esquerda, ON à direita. */
+.stage .module > h2, .stage .module > .sec-head { position: static; height: 24px; flex: none; }
+.stage .module > h2, .stage .sec-head h2 { font: 700 15px/1 var(--font); letter-spacing: 2.4px; }
+.stage .module > h2::after, .stage .sec-head h2::after { display: none; }
+.stage .module > h2 { display: flex; align-items: center; gap: 8px; }
+.stage .m-master > h2 { font-size: 13px; justify-content: center; }
+.stage .on-btn { height: 24px; padding: 0 9px; gap: 6px; }
+
+/* Seção: corpo à esquerda, coluna Amp fixa à direita (x = right − 74, y = 104), oitava no rodapé. */
+.stage .section .sec-body, .stage .section .opts { margin-right: 76px; }
+.stage .m-synth .sec-body, .stage .m-synth .opts { margin-right: 70px; }
+.stage .m-organ .amp-col, .stage .m-piano .amp-col { position: absolute; right: 12px; top: 104px; width: 66px; height: 226px; padding: 6px 2px; justify-content: space-between; }
+.stage .m-synth .amp-col { position: absolute; right: -3px; top: 76px; width: 68px; height: 290px; padding: 5px 3px; justify-content: space-between; }
+.stage .section .sec-foot, .stage .m-program .sec-foot { position: absolute; left: 12px; bottom: 10px; margin: 0; }
+.stage .sec-body { flex: none; gap: 10px; }
+.stage .fader { height: 136px; }
+.stage :is(.m-piano, .m-synth) .fader { height: 150px; }
+.stage .well, .stage .m-organ .drawbars, .stage .m-organ .opts .col, .stage .m-piano .inset, .stage .m-program .programs {
+  border-radius: 6px; background: #0000002e; box-shadow: var(--well);
+}
+
+/* Organ: drawbars numa caixa, opções em três caixas. */
+.stage .m-organ .drawbars { padding: 4px 6px; }
+.stage .m-organ .opts { border: 0; padding: 0; gap: 8px; justify-content: flex-start; }
+.stage .m-organ .opts .col { padding: 4px 6px 6px; }
+.stage .m-organ .selector.multi { gap: 4px; }
+.stage .m-organ .selector.multi button { padding: 4px 6px; min-width: 64px; }
+
+/* Piano & Strings: lista 162 × 192 + Load; Dynamics e Timbre em caixas. */
+.stage :is(.m-piano, .m-synth, .m-strings) .type-list:not(.sm) { width: 162px; height: 192px; max-height: none; }
+.stage :is(.m-piano, .m-synth, .m-strings) .load-btn-group { width: 162px; height: 28px; margin-top: 8px; display: flex; gap: 4px; }
+.stage :is(.m-piano, .m-synth, .m-strings) .load-btn-group .load-btn { width: auto; flex: 1; height: 28px; justify-content: center; margin-top: 0; padding: 0 4px; font-size: 10px; }
+.stage :is(.m-piano, .m-synth, .m-strings) > .load-btn { width: 162px; height: 28px; justify-content: center; margin-top: 8px; }
+.stage .m-piano .inset { padding: 4px 6px 6px; margin-bottom: 10px; }
+.stage .m-piano .sec-body > .col { gap: 0; }
+
+/* Program */
+.stage .m-program .seg { min-width: 82px; width: 82px; height: 60px; padding: 4px 6px; display: flex; align-items: center; justify-content: center; }
+.stage .m-program .oled { height: 104px; flex: none; }
+.stage .m-program .programs { padding: 6px; gap: 3px 4px; }
+
+/* Synth: três blocos empilhados; com a onda Sample a linha do SF2 entra no lugar do envelope. */
+.stage .m-synth .sec-body { align-items: flex-start; }
+.stage .m-synth .syn-blk .viz { height: 54px; }
+
+
+/* Layer Effects: 4 blocos lado a lado. */
+.stage .m-fx .fx-blocks { display: grid; grid-template-columns: 1fr 1.2fr 1.2fr 1.15fr; gap: 12px; flex: 1; min-height: 0; }
+.stage .m-fx .fx-block { height: 100%; }
+.stage .m-fx .fx-row { flex: 1; align-items: flex-start; }
+.stage .m-fx .selector.compact { width: 88px; flex: none; }
+.stage .m-fx .fx-block .viz { height: 46px; flex: none; }
+
+/* Teclado: pitch stick e mod wheel à esquerda, teclas até a borda (ky = 668, kh = 150). */
+.stage .keybed { position: absolute; left: 30px; right: 30px; top: 668px; height: 150px; margin: 0; gap: 12px; }
+.stage .wheels { padding: 0; gap: 6px; }
+.stage .keys-wrap { overflow: hidden; }
+.stage .keyboard { height: 141px; min-width: 0; }
+.stage .felt { min-width: 0; }
+
+/* Liga: os módulos sobem em sequência (o boot do nativo varre os LEDs logo depois). */
+@keyframes mod-in { from { opacity: 0; transform: translateY(8px); } }
+.stage .module { animation: mod-in .42s cubic-bezier(.2, .8, .3, 1) both; }
+.stage .m-organ { animation-delay: .05s; }
+.stage .m-piano { animation-delay: .1s; }
+.stage .m-program { animation-delay: .15s; }
+.stage .m-synth { animation-delay: .2s; }
+.stage .m-fx { animation-delay: .25s; }
+@media (prefers-reduced-motion: reduce) {
+  .stage .module, .section [data-l], .oled-title.swap, .minikeys .mk-mark, .split-mark { animation: none; transition: none; }
+}
+
+/* ---------- Ajustes finos do palco ---------- */
+/* Seletores do nativo são só a coluna de LEDs; o botão de borracha "próximo" fica no layout compacto. */
+.stage .selector .cycle { display: none; }
+/* Ondas: ids vencem as regras antigas do app.css (máscara ::after e LED acima do botão). */
+.m-synth :is(#oscSel, #oscSelB) button:not(.rubber) { font-size: 0; color: #e9edf2; padding: 0 0 0 5px; gap: 4px; width: 38px; height: 20px; justify-content: flex-start; }
+.m-synth :is(#oscSel, #oscSelB) button:not(.rubber)::after { display: none; }
+.m-synth :is(#oscSel, #oscSelB) button .led { position: static; width: 5px; height: 5px; margin: 0; }
+.m-synth :is(#oscSel, #oscSelB) button .ic { width: 16px; height: 13px; color: #e9edf2; }
+.m-synth :is(#oscSel, #oscSelB) button.on .ic { color: #fff; filter: drop-shadow(0 0 3px #ff6a4a); }
+/* Synth: blocos de no máximo ~90 px (nativo: 96 · 92 · 88). */
+.stage .m-synth .syn-blk { padding: 4px 6px 4px; gap: 2px; }
+.stage .m-synth .syn-row { gap: 4px; }
+.stage .m-synth .syn-blk .viz { height: 46px; }
+.stage .m-synth .knob.md { width: 50px; }
+.stage .m-synth .knob.md .wrap { --r: 19px; --skirt: 9px; --cap: 13px; width: 46px; height: 46px; }
+.stage .m-synth .knob.sm { width: 42px; }
+.stage .m-synth .knob.sm .wrap { --r: 17px; --skirt: 8px; --cap: 12px; width: 40px; height: 40px; }
+.stage .m-synth .knob.xs .wrap { --r: 13px; width: 32px; height: 32px; }
+.stage .m-synth .knob { font-size: 9px; }
+.stage .m-synth .sec-body { gap: 8px; }
+/* Piano: fader 34 · lista 162 · coluna 64, como no nativo. */
+.stage .m-piano .sec-body { gap: 8px; }
+.stage .m-piano .sec-body > .col.grow { flex: none; width: 162px; }
+.stage .m-piano .sec-body > .col:not(.grow) { width: 74px; }
+.stage .m-piano .type-list { width: 162px; }
+/* Displays estreitos do Synth: só o rótulo da esquerda (o da direita encavalava). */
+.stage .m-synth :is(.filter, .env) .viz-r { display: none; }
+.oled-status .st { opacity: .45; }
+/* Fora do palco (celular): Amp/FX numa faixa horizontal em vez de uma coluna alta. */
+body:not(.stage) .amp-col { flex-direction: row; flex-wrap: wrap; justify-content: space-around; align-items: center; }
+body:not(.stage) .m-synth .amp-col { flex-direction: column; width: auto; min-width: 66px; }
+body:not(.stage) .amp-col .amp-h { flex-basis: 100%; }
+
+/* Ferramentas do web (MIDI, tela cheia): acima da marca, no canto do palco. */
+.stage .tools { position: absolute; z-index: 2; top: 470px; left: 1218px; width: 356px; justify-content: flex-end; }

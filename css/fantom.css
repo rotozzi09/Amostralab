@@ -1,0 +1,530 @@
+/* LabPiano: layout "Workstation" (html[data-skin="fantom"]), alternado pelo botão Layout.
+   Workstation preta: tela colorida no centro (lista de sons), knobs com anel ciano, painel do
+   synth em azul-ardósia e pads 4×4 rosa. Os mesmos controles do layout Nord, só reposicionados
+   e repintados; os pads são o único bloco próprio (escondido no layout Nord). */
+
+.m-pads, .m-perf { display: none; }
+
+[data-skin="fantom"] {
+  --chassis: #141517;
+  --led: #ff3a2e;
+  --led-off: #2a0d0b;
+  --ink: #e6e8ec;
+  --ink-dim: #8e949c;
+  --ring: #3fe4ff;
+  --ring-off: #0f2a31;
+  --pad: #ff3fc8;
+  --slate: #3d4a5b;
+  --slate-hi: #4b5a6d;
+  --slate-lo: #323d4b;
+  --scr-bg: #070a14;
+  --scr-sel: #6b3fe0;
+  --blk: #262a31;
+  --blk-hi: #2e333b;
+  --blk-lo: #1d2026;
+  --blk-ink: #dfe3e8;
+  --ink-dark: #dfe3e8;
+  --stage-h: 908; /* faixa de performance entre os módulos e o teclado */
+}
+
+/* ---------- Chassi ---------- */
+[data-skin="fantom"] .instrument,
+[data-skin="fantom"] .stage .instrument {
+  background:
+    linear-gradient(180deg, #3a3c40 0, #1c1d20 7px, #161719 12px, transparent 13px),
+    var(--grain),
+    linear-gradient(180deg, #1a1b1e 0, #131416 40%, #0d0e10 100%);
+  background-blend-mode: normal, soft-light, normal;
+  border-top: 2px solid var(--ws-theme-color, #ff3a2e);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 15px var(--ws-theme-glow, rgba(255, 58, 46, 0.35));
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+[data-skin="fantom"] .instrument::before,
+[data-skin="fantom"] .instrument::after { background: linear-gradient(90deg, #2b2d31, #0c0d0f); }
+[data-skin="fantom"] .felt { background: linear-gradient(180deg, #1b1c1f, #0c0c0d); }
+
+/* Ilhas: preto fosco com filete fino, rótulos impressos em branco. */
+[data-skin="fantom"] .module {
+  background: linear-gradient(180deg, #1d1f23, #17181b 50%, #141518);
+  box-shadow: 0 0 0 1px #2c2e33, inset 0 1px 0 #ffffff0d;
+  border-radius: 4px;
+}
+[data-skin="fantom"] .m-master { background: none; box-shadow: none; }
+[data-skin="fantom"] .module > h2, [data-skin="fantom"] .sec-head h2 { font-weight: 600; letter-spacing: 3px; color: #f2f3f5; text-shadow: none; }
+[data-skin="fantom"] .module > h2::after, [data-skin="fantom"] .sec-head h2::after { background: linear-gradient(90deg, var(--ws-theme-color, #ff3a2e), #ffffff10); }
+[data-skin="fantom"] :is(.well, .inset, .m-organ .drawbars, .m-organ .opts .col, .m-program .programs) {
+  background: #0e0f11; box-shadow: inset 0 1px 3px #000c, 0 0 0 1px #26282c;
+}
+
+/* Botões de borracha preta com legenda branca e LED no tema. */
+[data-skin="fantom"] :is(.btn, .mini, .rubber, .selector.multi button) {
+  background: linear-gradient(180deg, #2c2e32 0, #212326 50%, #1a1b1e 100%);
+  box-shadow: 0 0 0 1px #050506, 0 2px 0 1px #050506, 0 3px 4px #0009, inset 0 1px 0 #ffffff1c;
+}
+[data-skin="fantom"] :is(.btn, .mini, .rubber, .selector.multi button):hover { background: linear-gradient(180deg, #34363b 0, #282a2e 50%, #1f2023 100%); }
+
+[data-skin="fantom"] :is(.btn.on, button.on, .mini.on, .rubber.on, .selector button.on) .led {
+  background: var(--led, #ff3a2e);
+  box-shadow: 0 0 6px var(--led, #ff3a2e);
+}
+
+/* Knobs: tampa preta e anel de LEDs com cor do tema. */
+[data-skin="fantom"] .knob .ring i { background: var(--ring-off); }
+[data-skin="fantom"] .knob .ring i.lit { background: radial-gradient(circle, #ffffff 0, var(--ring) 55%, var(--ws-theme-color) 100%); box-shadow: 0 0 4px var(--ring); }
+[data-skin="fantom"] .knob .cap {
+  background:
+    radial-gradient(circle at 50% 50%, transparent 55%, #0006 100%),
+    conic-gradient(from 10deg, #2a2c30, #5a5d63 10%, #232528 24%, #45484d 36%, #1c1e21 50%, #55585e 62%, #222427 76%, #4a4d52 88%, #2a2c30);
+}
+[data-skin="fantom"] .knob .cap b::before { background: #f2f4f6; box-shadow: none; }
+
+/* ---------- Tela colorida (lista de sons do Piano + display do Program) ---------- */
+[data-skin="fantom"] .m-piano .type-list {
+  background: var(--scr-bg);
+  box-shadow: 0 0 0 3px #050507, 0 0 0 4px #2f3237, inset 0 0 18px #000;
+  border-radius: 3px; counter-reset: tone;
+}
+[data-skin="fantom"] .m-piano .type-list button { color: #c9d2e3; border-radius: 2px; }
+[data-skin="fantom"] .m-piano .type-list button .nm::before { counter-increment: tone; content: counter(tone, decimal-leading-zero) ":"; margin-right: 4px; color: #7d8aa3; }
+[data-skin="fantom"] .m-piano .type-list button.on { color: #fff; background: linear-gradient(90deg, var(--scr-sel), var(--ws-theme-color)); box-shadow: 0 0 10px var(--ws-theme-glow); }
+[data-skin="fantom"] .m-piano .type-list button.on .nm::before { color: #ffffff; }
+[data-skin="fantom"] .m-piano .type-list button.on .led { background: #fff; box-shadow: 0 0 6px #fff; }
+[data-skin="fantom"] .m-piano .type-list button:hover { background: #ffffff12; }
+
+[data-skin="fantom"] .oled {
+  background: linear-gradient(180deg, #0c1222 0, var(--scr-bg) 60%);
+  box-shadow: 0 0 0 3px #050507, 0 0 0 4px #2f3237, inset 0 0 18px #000;
+  color: #f1f4fb;
+}
+[data-skin="fantom"] .oled::before { display: none; }
+[data-skin="fantom"] .oled-title { color: #fff; }
+[data-skin="fantom"] .oled-line { color: #aab8d6; }
+[data-skin="fantom"] .oled-bar { background: #ffffff14; box-shadow: none; }
+[data-skin="fantom"] .oled-bar i { background: var(--oled-grad, linear-gradient(90deg, var(--scr-sel), var(--ws-theme-color))); box-shadow: 0 0 6px var(--ws-theme-glow); }
+[data-skin="fantom"] .oled-status { color: var(--ring); }
+
+/* ---------- Synth: placa azul-ardósia, blocos com filete claro ---------- */
+[data-skin="fantom"] .m-synth { background: linear-gradient(180deg, var(--slate-hi), var(--slate) 40%, var(--slate-lo)); box-shadow: 0 0 0 1px #1b222b, inset 0 1px 0 #ffffff1f; }
+[data-skin="fantom"] .m-synth .syn-blk { background: #00000022; box-shadow: inset 0 0 0 1px #9fb1c733; border-radius: 3px; }
+[data-skin="fantom"] .m-synth .blk-h { color: #e8eef6; }
+[data-skin="fantom"] .m-synth .viz { background: var(--scr-bg); }
+[data-skin="fantom"] .m-synth .knob { color: #c5d0dd; }
+
+/* Blocos claros (FX, Amp) viram grafite para combinar com o chassi preto. */
+[data-skin="fantom"] :is(.fx-block, .amp-col) { background: linear-gradient(180deg, var(--blk-hi), var(--blk) 50%, var(--blk-lo)); box-shadow: inset 0 0 0 1px #3a3e46; }
+[data-skin="fantom"] :is(.fx-block, .amp-col) .blk-h { color: var(--blk-ink); }
+[data-skin="fantom"] :is(.amp-col, .syn-blk, .fx-block) .knob { color: #b9c3cf; }
+[data-skin="fantom"] .selector.compact button:not(.rubber) { color: #9ea8b4; }
+[data-skin="fantom"] .selector.compact button:not(.rubber):hover { color: #fff; background: #ffffff10; }
+[data-skin="fantom"] .selector.compact button.on { color: #fff; }
+
+/* ---------- Pads 4×4 ---------- */
+[data-skin="fantom"] .m-pads { display: flex; flex-direction: column; }
+.pads { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: 6px; flex: 1; min-height: 0; }
+.pad {
+  position: relative; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start;
+  min-height: 34px; padding: 4px 5px; border: 0; border-radius: 4px; cursor: pointer; touch-action: none;
+  background: linear-gradient(180deg, #22252c, #15171b);
+  box-shadow: inset 0 0 0 2px var(--pad), 0 0 8px var(--ws-theme-glow), 0 2px 0 #050506;
+  color: #f1f4fb; font: 700 9px/1 var(--font); letter-spacing: .5px;
+  transition: background .05s, box-shadow .08s, transform .05s;
+}
+.pad span { align-self: flex-end; font-weight: 500; opacity: .6; }
+.pad:hover { background: linear-gradient(180deg, #2a2e37, #1c1e23); }
+.pad.down {
+  transform: translateY(1px);
+  background: radial-gradient(circle at 50% 45%, #ffffff 0, var(--pad) 55%, var(--ws-theme-color) 100%);
+  box-shadow: inset 0 0 0 2px #ffffff, 0 0 18px 4px var(--ws-theme-glow); color: #ffffff;
+}
+.pad:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* ---------- Palco 1600 × 840: FX deslocado para a esquerda (left: 26px), pads em 1040px, marca e ferramentas na ponta (1276px) ---------- */
+[data-skin="fantom"] .stage .m-fx { left: 130px; width: 896px; }
+[data-skin="fantom"] .stage .m-pads { position: absolute; top: 462px; left: 1040px; width: 220px; height: 186px; padding: 10px 12px 12px; z-index: 2; }
+[data-skin="fantom"] .stage .m-pads > h2 { position: static; height: 18px; font-size: 13px; letter-spacing: 2.4px; display: flex; align-items: center; gap: 8px; }
+[data-skin="fantom"] .stage .m-pads > h2::before { display: none; }
+[data-skin="fantom"] .stage .wordmark { position: absolute; top: 462px; left: 1276px; width: 298px; height: 186px; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; text-align: right; pointer-events: none; padding-bottom: 4px; }
+[data-skin="fantom"] .stage .wm-name { font-size: 48px; line-height: 1; letter-spacing: -1.2px; margin: 0; text-align: right; }
+[data-skin="fantom"] .stage .wm-sub { font-size: 11px; letter-spacing: 2.8px; margin-top: 2px; opacity: 0.85; text-align: right; }
+[data-skin="fantom"] .stage .tools { position: absolute; top: 466px; left: 1276px; width: 298px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; z-index: 5; }
+
+/* Fora do palco (celular/tablet): pads numa faixa própria, abaixo do FX. */
+[data-skin="fantom"] body:not(.stage) .m-pads { order: 10; flex: 1 1 100%; padding: 10px; }
+[data-skin="fantom"] body:not(.stage) .pad { min-height: 48px; }
+
+/* Pads: modo (Sample / Note / Zone / Step), Assign e estados. */
+.pad-mode { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin: 2px 0 6px; }
+:is(.pad-mode, .perf-sel) button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 20px; padding: 0 6px;
+  border: 0; border-radius: 3px; cursor: pointer; background: #0e0f11; box-shadow: inset 0 0 0 1px #2c2f35;
+  color: #8e949c; font: 700 9.5px/1 var(--font); letter-spacing: .6px; text-transform: uppercase;
+}
+:is(.pad-mode, .perf-sel) button:hover { color: #fff; }
+:is(.pad-mode, .perf-sel) button.on { color: #ffffff; background: linear-gradient(180deg, #2a2d36, #16181d); box-shadow: inset 0 0 0 1px var(--ring), 0 0 8px var(--ws-theme-glow); }
+.pad-mode .led { width: 5px; height: 5px; }
+.m-pads > h2 .pad-assign { margin-left: auto; height: 18px; padding: 0 7px; font-size: 9px; letter-spacing: .8px; }
+.pad { min-width: 0; overflow: hidden; }
+.pad span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pad.dim { opacity: .45; }
+.pad.lit { background: linear-gradient(180deg, #2a2e36, #16181d); box-shadow: inset 0 0 0 2px var(--pad), 0 0 14px 2px var(--ws-theme-glow); color: #fff; }
+.pad.cur { outline: 2px solid var(--ring); outline-offset: 1px; }
+.pad.loop b::after { content: " ↻"; font-weight: 500; opacity: .8; }
+.pad.drag { box-shadow: inset 0 0 0 2px #fff, 0 0 18px 4px var(--ws-theme-glow); }
+
+/* ---------- Faixa de performance: Tempo, Arpeggio, Chord, Step Sequencer ---------- */
+[data-skin="fantom"] .m-perf { display: flex; flex-direction: row; gap: 10px; align-items: stretch; flex-wrap: wrap; }
+.perf-blk { display: flex; flex-direction: column; gap: 6px; padding: 6px 10px 8px; border-radius: 3px; background: #0e0f11; box-shadow: inset 0 1px 3px #000c, 0 0 0 1px #26282c; }
+.perf-blk .blk-h { margin: 0; color: #f2f3f5; font: 600 10px/1 var(--font); letter-spacing: 2px; text-transform: uppercase; }
+.perf-row { display: flex; align-items: center; gap: 6px; }
+.perf-sel { display: flex; gap: 2px; }
+.perf-row .btn.small { height: 22px; padding: 0 8px; font-size: 10px; }
+.perf-seq { flex: 1; min-width: 0; }
+.steps { display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 3px; flex: 1; min-width: 0; margin-left: 4px; }
+.step {
+  position: relative; height: 26px; padding: 2px 3px; border: 0; border-radius: 3px; cursor: pointer;
+  display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start;
+  background: linear-gradient(180deg, #2c2e32, #1c1d20); box-shadow: 0 0 0 1px #050506, inset 0 1px 0 #ffffff14;
+  color: #9ea8b4; font: 700 8px/1 var(--font);
+}
+.step:nth-child(4n+1) { margin-left: 3px; }
+.step:nth-child(1) { margin-left: 0; }
+.step .led { position: absolute; top: 3px; right: 3px; width: 5px; height: 5px; }
+.step i { font-style: normal; font-weight: 500; color: #8fe9ff; font-size: 8px; }
+.step:nth-child(-n+4).on { --step: #ff5a4a; }
+.step:nth-child(n+5):nth-child(-n+8).on { --step: #ffa23a; }
+.step:nth-child(n+9):nth-child(-n+12).on { --step: #ffe14a; }
+.step:nth-child(n+13).on { --step: #f2f4f6; }
+.step.on .led { background: var(--step); box-shadow: 0 0 6px var(--step); }
+.step.cur { background: linear-gradient(180deg, #3d4046, #2a2c31); color: #fff; box-shadow: 0 0 0 1px var(--ring), 0 0 10px var(--ws-theme-glow); }
+.step.cursor { box-shadow: 0 0 0 1px #050506, inset 0 0 0 1px var(--pad); }
+#tapBtn.flash .led { animation: led-on .2s; background: var(--led); }
+
+/* Palco: faixa entre os módulos de baixo (462–648) e o teclado, que desce 68 px. */
+[data-skin="fantom"] .stage .instrument { height: 908px; }
+[data-skin="fantom"] .stage .keybed { top: 736px; }
+[data-skin="fantom"] .stage .m-perf { top: 658px; left: 26px; width: 1548px; height: 68px; padding: 6px 8px; gap: 8px; flex-wrap: nowrap; }
+[data-skin="fantom"] .stage .m-pads .pads { gap: 5px; }
+[data-skin="fantom"] .stage .m-pads .pad { min-height: 0; }
+[data-skin="fantom"] body:not(.stage) .m-perf { order: 11; flex: 1 1 100%; padding: 10px; }
+[data-skin="fantom"] body:not(.stage) .perf-row { flex-wrap: wrap; }
+[data-skin="fantom"] body:not(.stage) .steps { flex: 1 1 100%; margin: 0; }
+
+/* Arrastar áudio para um pad: o aviso global não pode cobrir os pads. */
+[data-skin="fantom"] .drop { pointer-events: none; }
+
+/* ---------- Biblioteca de amostras (diálogo dos pads) ---------- */
+.padlib {
+  width: min(760px, 94vw); max-height: 82vh; padding: 0; border: 0; border-radius: 8px;
+  background: #15161a; color: #e6e8ec; box-shadow: 0 0 0 1px #2f3237, 0 24px 60px #000c;
+  font-family: var(--font, system-ui);
+}
+.padlib[open] { display: flex; flex-direction: column; }
+.padlib::backdrop { background: #000a; }
+.lib-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 8px; }
+.lib-head h3 { margin: 0; font: 600 14px/1 var(--font); letter-spacing: 2px; text-transform: uppercase; }
+.lib-head em { font-style: normal; margin-left: 8px; color: var(--ws-theme-color); }
+.lib-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 14px 10px; }
+.lib-bar input, .lib-bar select { height: 28px; padding: 0 8px; border: 0; border-radius: 4px; background: #0a0b0d; color: #e6e8ec; box-shadow: inset 0 0 0 1px #2f3237; font: 500 13px var(--font); }
+.lib-bar input { flex: 1 1 220px; }
+.lib-count { margin-left: auto; color: #8e949c; font-size: 12px; }
+.lib-list { list-style: none; margin: 0; padding: 0 8px; overflow-y: auto; flex: 1; min-height: 160px; }
+.lib-list li { display: grid; grid-template-columns: 28px 1fr auto auto; align-items: center; gap: 10px; padding: 6px; border-radius: 4px; }
+.lib-list li:hover { background: #ffffff0a; }
+.lib-list .lib-msg { display: block; padding: 18px 10px; color: #8e949c; }
+.lib-play { width: 28px; height: 28px; border: 0; border-radius: 50%; cursor: pointer; background: #12141a; color: var(--ring); font-size: 11px; box-shadow: inset 0 0 0 1px var(--ring); }
+.lib-nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.lib-meta { color: #8e949c; font-size: 12px; white-space: nowrap; }
+.lib-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px 12px; border-top: 1px solid #26282c; }
+.lib-foot a { margin-left: auto; color: var(--ring); font-size: 12px; }
+@media (max-width: 560px) {
+  .lib-list li { grid-template-columns: 28px 1fr auto; }
+  .lib-meta { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pad { transition: none; }
+}
+
+[data-skin="fantom"] .am-chassis::before {
+  background: var(--oled-grad, linear-gradient(90deg, var(--scr-sel), var(--ws-theme-color)));
+}
+[data-skin="fantom"] .am-sec-h {
+  color: var(--ws-theme-color);
+}
+
+/* ---------- Definições de Temas de Cores ---------- */
+
+/* 1. Vermelho - Padrão (Nord Red) */
+html,
+html[data-ws-color="red"] {
+  --ws-chassis-bg: linear-gradient(180deg, #de3a33 0, #c41e1c 6%, #b8191a 55%, #a51416 100%);
+  --ws-theme-color: #ff3a2e;
+  --ws-theme-glow: rgba(255, 58, 46, 0.45);
+  --led: #ff3a2e;
+  --led-off: #3a0d0a;
+  --ring: #ff3a2e;
+  --pad: #ff3fc8;
+  --scr-sel: #d9261c;
+  --oled-grad: linear-gradient(90deg, #ff3a2e, #ff7733);
+}
+
+/* 2. Amarelo (Yellow) */
+html[data-ws-color="yellow"] {
+  --ws-chassis-bg: linear-gradient(180deg, #e6ab00 0, #d99f00 6%, #c48f00 55%, #997000 100%);
+  --ws-theme-color: #ffc800;
+  --ws-theme-glow: rgba(255, 200, 0, 0.45);
+  --led: #ffc800;
+  --led-off: #3a2d00;
+  --ring: #ffc800;
+  --pad: #ffe03f;
+  --scr-sel: #b88a00;
+  --oled-grad: linear-gradient(90deg, #ffc800, #ff9400);
+}
+
+/* 3. Laranja (Orange) */
+html[data-ws-color="orange"] {
+  --ws-chassis-bg: linear-gradient(180deg, #e65c00 0, #d95300 6%, #c44b00 55%, #993b00 100%);
+  --ws-theme-color: #ff6b1a;
+  --ws-theme-glow: rgba(255, 107, 26, 0.45);
+  --led: #ff6b1a;
+  --led-off: #3a1703;
+  --ring: #ff772e;
+  --pad: #ff8533;
+  --scr-sel: #c44800;
+  --oled-grad: linear-gradient(90deg, #ff6b1a, #ff9d00);
+}
+
+/* 4. Verde (Green) */
+html[data-ws-color="green"] {
+  --ws-chassis-bg: linear-gradient(180deg, #11b84a 0, #0fa040 6%, #0d8c38 55%, #0a6d2b 100%);
+  --ws-theme-color: #10e052;
+  --ws-theme-glow: rgba(16, 224, 82, 0.45);
+  --led: #10e052;
+  --led-off: #043311;
+  --ring: #2be05d;
+  --pad: #3fe484;
+  --scr-sel: #0c9e3a;
+  --oled-grad: linear-gradient(90deg, #10e052, #00b37e);
+}
+
+/* 5. Azul escuro (Dark Blue) */
+html[data-ws-color="darkblue"] {
+  --ws-chassis-bg: linear-gradient(180deg, #2462ed 0, #1f57d4 6%, #194bc0 55%, #123896 100%);
+  --ws-theme-color: #2979ff;
+  --ws-theme-glow: rgba(41, 121, 255, 0.45);
+  --led: #2979ff;
+  --led-off: #071a3a;
+  --ring: #2979ff;
+  --pad: #4b88ff;
+  --scr-sel: #1554c0;
+  --oled-grad: linear-gradient(90deg, #2979ff, #7029ff);
+}
+
+/* 6. Azul Claro (Light Blue / Cyan) */
+html[data-ws-color="lightblue"] {
+  --ws-chassis-bg: linear-gradient(180deg, #00b8e6 0, #00a4cc 6%, #0092b8 55%, #00708f 100%);
+  --ws-theme-color: #00e5ff;
+  --ws-theme-glow: rgba(0, 229, 255, 0.45);
+  --led: #00e5ff;
+  --led-off: #003338;
+  --ring: #3fe4ff;
+  --pad: #3fd5ff;
+  --scr-sel: #008b9b;
+  --oled-grad: linear-gradient(90deg, #00e5ff, #0088ff);
+}
+
+/* Componente de seleção de cor do Layout Stage */
+.ws-color-box {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: relative;
+  z-index: 10;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  margin-top: 4px;
+  padding: 5px 4px;
+  background: linear-gradient(180deg, #1d1f24 0%, #141518 100%);
+  border: 1px solid #2a2d34;
+  border-radius: 5px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 3px 6px rgba(0, 0, 0, 0.4);
+}
+
+[data-skin="fantom"] .ws-color-box {
+  display: none !important;
+}
+
+.stage .ws-color-box {
+  position: absolute !important;
+  top: 456px !important;
+  left: 26px !important;
+  width: 92px !important;
+  height: 186px !important;
+  margin-top: 0 !important;
+  padding: 8px 6px !important;
+  box-sizing: border-box !important;
+  z-index: 100 !important;
+}
+
+.ws-color-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font: 700 8.5px/1 var(--font);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #8e949c;
+  margin: 0;
+  text-shadow: 0 1px 2px #000;
+}
+
+.ws-color-menu {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  width: 100%;
+  padding: 4px 0;
+}
+
+.ws-color-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #282b32;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #2b2e35 0%, #1a1c20 100%);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12);
+  transition: all 0.15s ease;
+}
+
+.ws-color-menu button:hover {
+  background: linear-gradient(180deg, #353942 0%, #202328 100%);
+  border-color: #404552;
+}
+
+.ws-color-menu button.on {
+  background: linear-gradient(180deg, #2c303a 0%, #16181e 100%);
+  border-color: var(--ws-theme-color);
+  box-shadow: 0 0 10px var(--ws-theme-glow), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.ws-color-menu .swatch {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.8);
+  box-shadow: inset -1px -1px 3px rgba(0, 0, 0, 0.7), inset 1px 1px 3px rgba(255, 255, 255, 0.6);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ws-color-menu button.on .swatch {
+  transform: scale(1.2);
+}
+
+.swatch.red {
+  background: radial-gradient(circle at 35% 35%, #ff9e96 0%, #ff3a2e 55%, #991008 100%);
+}
+.ws-color-menu button.on .swatch.red {
+  box-shadow: 0 0 8px #ff3a2e, inset -1px -1px 2px rgba(0,0,0,0.5), inset 1px 1px 2px #fff;
+}
+
+.swatch.yellow {
+  background: radial-gradient(circle at 35% 35%, #fff2a3 0%, #ffc800 55%, #997400 100%);
+}
+.ws-color-menu button.on .swatch.yellow {
+  box-shadow: 0 0 8px #ffc800, inset -1px -1px 2px rgba(0,0,0,0.5), inset 1px 1px 2px #fff;
+}
+
+.swatch.orange {
+  background: radial-gradient(circle at 35% 35%, #ffbe96 0%, #ff6b1a 55%, #993800 100%);
+}
+.ws-color-menu button.on .swatch.orange {
+  box-shadow: 0 0 8px #ff6b1a, inset -1px -1px 2px rgba(0,0,0,0.5), inset 1px 1px 2px #fff;
+}
+
+.swatch.green {
+  background: radial-gradient(circle at 35% 35%, #9cf8be 0%, #10e052 55%, #056e25 100%);
+}
+.ws-color-menu button.on .swatch.green {
+  box-shadow: 0 0 8px #10e052, inset -1px -1px 2px rgba(0,0,0,0.5), inset 1px 1px 2px #fff;
+}
+
+.swatch.moss {
+  background: radial-gradient(circle at 35% 35%, #d0ebd0 0%, #6b8e23 55%, #354a12 100%);
+}
+.ws-color-menu button.on .swatch.moss {
+  box-shadow: 0 0 8px #8fbc8f, inset -1px -1px 2px rgba(0,0,0,0.5), inset 1px 1px 2px #fff;
+}
+
+.swatch.darkblue {
+  background: radial-gradient(circle at 35% 35%, #a6c8ff 0%, #2979ff 55%, #0c3d8a 100%);
+}
+.ws-color-menu button.on .swatch.darkblue {
+  box-shadow: 0 0 8px #2979ff, inset -1px -1px 2px rgba(0,0,0,0.5), inset 1px 1px 2px #fff;
+}
+
+.swatch.lightblue {
+  background: radial-gradient(circle at 35% 35%, #b5f8ff 0%, #00e5ff 55%, #00707d 100%);
+}
+.ws-color-menu button.on .swatch.lightblue {
+  box-shadow: 0 0 8px #00e5ff, inset -1px -1px 2px rgba(0,0,0,0.5), inset 1px 1px 2px #fff;
+}
+
+.swatch.purple {
+  background: radial-gradient(circle at 35% 35%, #e9d5ff 0%, #a855f7 55%, #581c87 100%);
+}
+.ws-color-menu button.on .swatch.purple {
+  box-shadow: 0 0 8px #a855f7, inset -1px -1px 2px rgba(0,0,0,0.5), inset 1px 1px 2px #fff;
+}
+
+.swatch.white {
+  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #cbd5e1 55%, #475569 100%);
+}
+.ws-color-menu button.on .swatch.white {
+  box-shadow: 0 0 8px #38bdf8, inset -1px -1px 2px rgba(0,0,0,0.5), inset 1px 1px 2px #fff;
+}
+
+/* 7. Roxo (Purple) */
+html[data-ws-color="purple"] {
+  --ws-chassis-bg: linear-gradient(180deg, #8b3fd9 0, #7b2cbf 6%, #6c1ec4 55%, #5a12a8 100%);
+  --ws-theme-color: #a855f7;
+  --ws-theme-glow: rgba(168, 85, 247, 0.45);
+  --led: #a855f7;
+  --led-off: #2a0b42;
+  --ring: #c084fc;
+  --pad: #e879f9;
+  --scr-sel: #7e22ce;
+  --oled-grad: linear-gradient(90deg, #a855f7, #ec4899);
+}
+
+/* 8. Branco (White) */
+html[data-ws-color="white"] {
+  --ws-chassis-bg: linear-gradient(180deg, #ffffff 0, #f1f5f9 6%, #e2e8f0 55%, #cbd5e1 100%);
+  --ws-theme-color: #334155;
+  --ws-theme-glow: rgba(15, 23, 42, 0.35);
+  --led: #0284c7;
+  --led-off: #33415511;
+  --ring: #0284c7;
+  --pad: #f43f5e;
+  --scr-sel: #0369a1;
+  --oled-grad: linear-gradient(90deg, #0284c7, #6366f1);
+}
+
+/* Verde Musgo (Moss Green) */
+html[data-ws-color="moss"] {
+  --ws-chassis-bg: linear-gradient(180deg, #556b2f 0, #4a5d29 6%, #3d4d22 55%, #2d3b19 100%);
+  --ws-theme-color: #8fbc8f;
+  --ws-theme-glow: rgba(143, 188, 143, 0.45);
+  --led: #8fbc8f;
+  --led-off: #1b2611;
+  --ring: #a2d2a2;
+  --pad: #c5e1c5;
+  --scr-sel: #3b5323;
+  --oled-grad: linear-gradient(90deg, #8fbc8f, #6b8e23);
+}
