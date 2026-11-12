@@ -36,6 +36,7 @@ svg.ic { overflow: visible; }
   display: flex; align-items: center; gap: 6px; min-height: 50px; padding: 2px 6px; flex: none;
   border-radius: 6px; background: #0000002e; box-shadow: var(--well);
 }
+.layer-row > .knob { flex: none; }
 .lbtn {
   position: relative; width: 34px; height: 44px; flex: none; border: 0; border-radius: 5px; padding: 6px 0 0;
   display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -114,9 +115,23 @@ svg.ic { overflow: visible; }
 .type-list .tg.wav { color: #6ee7b7; box-shadow: inset 0 0 0 1px #34d39966; }
 
 /* Program */
-.prog-top { display: flex; gap: 8px; align-items: stretch; }
-.prog-btns { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-.prog-btns .btn { flex: 1; justify-content: flex-start; }
+.prog-top { display: flex; gap: 6px; align-items: stretch; min-width: 0; }
+.prog-top .seg { flex: none; min-width: 82px; padding: 4px 6px; }
+.prog-btns { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 4px; }
+.prog-btns .btn {
+  justify-content: flex-start;
+  padding: 2px 4px;
+  gap: 3px;
+  font-size: 8.5px;
+  letter-spacing: 0.5px;
+  min-height: 18px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+}
+.prog-btns .btn .ic { flex: none; width: 11px; height: 11px; }
 .programs .btn.prog { flex-direction: column; gap: 3px; height: 38px; padding: 4px 0 3px; }
 .programs .btn.prog b { font: 700 14px/1 var(--font); }
 .programs .btn.prog .slot { width: 14px; height: 2px; border-radius: 1px; background: #ffffff1a; }
@@ -164,8 +179,9 @@ svg.ic { overflow: visible; }
 .stage .instrument {
   width: 1600px; height: 840px; max-width: none; margin: 10px auto 0; padding: 0;
   zoom: var(--stage-zoom, 1);
-  background: var(--grain), linear-gradient(180deg, #de3a33 0, var(--chassis) 6%, #bb171a 55%, #a51416 100%);
+  background: var(--grain), var(--ws-chassis-bg, linear-gradient(180deg, #de3a33 0, var(--chassis) 6%, #bb171a 55%, #a51416 100%));
   background-blend-mode: soft-light, normal;
+  transition: background 0.3s ease;
 }
 .stage .instrument::before, .stage .instrument::after { width: 16px; }
 .stage .panel { position: absolute; inset: 0; display: block; padding: 0; overflow: visible; }
@@ -175,10 +191,16 @@ svg.ic { overflow: visible; }
 .stage .m-piano { left: 518px; width: 376px; }
 .stage .m-program { left: 906px; width: 280px; }
 .stage .m-synth { left: 1198px; width: 376px; }
-.stage .m-fx { top: 456px; left: 130px; width: 1056px; height: 192px; padding: 10px 16px 12px; }
+.stage .m-fx { top: 456px; left: 135px; width: 1051px; height: 192px; padding: 10px 16px 12px; }
 .stage .wordmark { position: absolute; top: 462px; left: 1218px; width: 356px; height: 186px; padding: 0 2px 4px; }
-.stage .wm-name { font: 300 64px/1 var(--font); letter-spacing: -1.4px; }
-.stage .wm-sub { font-size: 12px; letter-spacing: 3.6px; }
+.stage .wm-name {
+  font: 300 64px/1 var(--font);
+  letter-spacing: -1.4px;
+  color: var(--ws-brand-color, #fff);
+  text-shadow: 0 0 25px var(--ws-theme-glow, transparent);
+  transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+.stage .wm-sub { font-size: 12px; letter-spacing: 3.6px; color: var(--ws-sub-color, #fff); }
 
 /* Títulos dentro da ilha (como o nativo): nome à esquerda, ON à direita. */
 .stage .module > h2, .stage .module > .sec-head { position: static; height: 24px; flex: none; }
@@ -209,30 +231,22 @@ svg.ic { overflow: visible; }
 .stage .m-organ .selector.multi button { padding: 4px 6px; min-width: 64px; }
 
 /* Piano & Strings: lista 162 × 192 + Load; Dynamics e Timbre em caixas. */
-.stage :is(.m-piano, .m-synth) .type-list:not(.sm) { width: 162px; height: 192px; max-height: none; }
-.stage :is(.m-piano, .m-synth) .load-btn { width: 162px; height: 28px; justify-content: center; margin-top: 8px; }
+.stage :is(.m-piano, .m-synth, .m-strings) .type-list:not(.sm) { width: 162px; height: 192px; max-height: none; }
+.stage :is(.m-piano, .m-synth, .m-strings) .load-btn-group { width: 162px; height: 28px; margin-top: 8px; display: flex; gap: 4px; }
+.stage :is(.m-piano, .m-synth, .m-strings) .load-btn-group .load-btn { width: auto; flex: 1; height: 28px; justify-content: center; margin-top: 0; padding: 0 4px; font-size: 10px; }
+.stage :is(.m-piano, .m-synth, .m-strings) > .load-btn { width: 162px; height: 28px; justify-content: center; margin-top: 8px; }
 .stage .m-piano .inset { padding: 4px 6px 6px; margin-bottom: 10px; }
 .stage .m-piano .sec-body > .col { gap: 0; }
 
 /* Program */
-.stage .m-program .seg { min-width: 100px; height: 62px; display: flex; align-items: center; justify-content: center; }
+.stage .m-program .seg { min-width: 82px; width: 82px; height: 60px; padding: 4px 6px; display: flex; align-items: center; justify-content: center; }
 .stage .m-program .oled { height: 104px; flex: none; }
 .stage .m-program .programs { padding: 6px; gap: 3px 4px; }
 
 /* Synth: três blocos empilhados; com a onda Sample a linha do SF2 entra no lugar do envelope. */
 .stage .m-synth .sec-body { align-items: flex-start; }
 .stage .m-synth .syn-blk .viz { height: 54px; }
-.stage .m-synth .sample-row { display: none; }
-.stage .m-synth[data-focus="A"]:has(#oscSel [data-osc="sample"].on) .sample-row {
-  display: flex; position: absolute; left: 54px; right: 88px; bottom: 46px; gap: 4px; align-items: center; z-index: 4;
-}
-.stage .m-synth[data-focus="A"]:has(#oscSel [data-osc="sample"].on) .lpane[data-l="A"] .syn-blk.env { visibility: hidden; }
-.stage .sample-row .lcd { flex: 1; min-width: 0; }
-.stage .sample-row #synthList { display: none; }
-.stage .sample-row.open #synthList {
-  display: flex; position: absolute; left: 0; right: 0; bottom: calc(100% + 4px); width: auto; max-height: 160px;
-  box-shadow: 0 0 0 1px #000, 0 8px 18px #000c; animation: pane-in .18s ease-out;
-}
+
 
 /* Layer Effects: 4 blocos lado a lado. */
 .stage .m-fx .fx-blocks { display: grid; grid-template-columns: 1fr 1.2fr 1.2fr 1.15fr; gap: 12px; flex: 1; min-height: 0; }

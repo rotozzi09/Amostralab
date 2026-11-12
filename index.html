@@ -4,9 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#8c1a11" />
-    <title>LabPiano — AmostraLab</title>
+    <title>WorkestraPiano — AmostraLab</title>
     <meta name="description" content="Virtual stage keyboard and musical workstation with organ, synth, soundfont sampler, layers, effects, and 88-key piano." />
-    <meta property="og:title" content="LabPiano — AmostraLab" />
+    <meta property="og:title" content="WorkestraPiano — AmostraLab" />
     <meta property="og:description" content="Virtual stage keyboard and musical workstation with organ, synth, soundfont sampler, layers, effects, and 88-key piano." />
     <link rel="icon" href="data:," />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -14,13 +14,18 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&amp;family=Share+Tech+Mono&amp;display=swap" />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="stylesheet" href="css/native.css" />
-    <link rel="stylesheet" href="css/fantom.css" />
+    <link rel="stylesheet" href="css/fantom.css?v=6" />
     <link rel="manifest" href="manifest.json?v=3" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="LabPiano" />
+    <meta name="apple-mobile-web-app-title" content="WorkestraPiano" />
     <script>
-      try { const k = localStorage.getItem(&#34;labpiano.skin&#34;); if (k === &#34;fantom&#34;) document.documentElement.dataset.skin = k; } catch { /* sem storage */ }
+      try {
+        const k = localStorage.getItem("labpiano.skin");
+        if (k === "fantom") document.documentElement.dataset.skin = k;
+        const c = localStorage.getItem("labpiano.ws_color");
+        if (c) document.documentElement.dataset.wsColor = c;
+      } catch { /* sem storage */ }
     </script>
   </head>
   <body>
@@ -74,6 +79,41 @@
             <span>Audio/MIDI</span>
           </button>
         </section>
+        <div class="ws-color-box" id="wsColorBox" title="Seleção de Cor do Layout">
+          <h3 class="ws-color-title">
+            <i class="ic" data-icon="palette" data-size="11"></i>
+            <span>Cor Layout</span>
+          </h3>
+          <div class="ws-color-menu" id="wsColorMenu" role="radiogroup" aria-label="Cor do Layout">
+            <button type="button" role="radio" data-ws-color="red" class="on" title="Vermelho - Padrão" aria-checked="true">
+              <span class="swatch red"></span>
+            </button>
+            <button type="button" role="radio" data-ws-color="orange" title="Laranja" aria-checked="false">
+              <span class="swatch orange"></span>
+            </button>
+            <button type="button" role="radio" data-ws-color="yellow" title="Amarelo" aria-checked="false">
+              <span class="swatch yellow"></span>
+            </button>
+            <button type="button" role="radio" data-ws-color="green" title="Verde" aria-checked="false">
+              <span class="swatch green"></span>
+            </button>
+            <button type="button" role="radio" data-ws-color="moss" title="Verde Musgo" aria-checked="false">
+              <span class="swatch moss"></span>
+            </button>
+            <button type="button" role="radio" data-ws-color="darkblue" title="Azul escuro" aria-checked="false">
+              <span class="swatch darkblue"></span>
+            </button>
+            <button type="button" role="radio" data-ws-color="lightblue" title="Azul Claro" aria-checked="false">
+              <span class="swatch lightblue"></span>
+            </button>
+            <button type="button" role="radio" data-ws-color="purple" title="Roxo" aria-checked="false">
+              <span class="swatch purple"></span>
+            </button>
+            <button type="button" role="radio" data-ws-color="white" title="Branco" aria-checked="false">
+              <span class="swatch white"></span>
+            </button>
+          </div>
+        </div>
         <!-- ORGAN -->
         <section class="module m-organ section" data-section="organ" data-focus="A">
           <header class="sec-head">
@@ -321,9 +361,9 @@
               <b>              B
 </b>
             </button>
+            <div class="knob xs" data-param="L.piano.B.level" data-value="0.8" data-label="Level" aria-label="Level Canal B" title="Volume do Canal B">
+            </div>
             <div class="lctl" data-l="A">
-              <div class="knob xs" data-param="L.piano.A.level" data-value="0.8" data-label="Level">
-              </div>
               <div class="lstep">
                 <span>                Oct
 </span>
@@ -356,8 +396,6 @@
               </div>
             </div>
             <div class="lctl" data-l="B">
-              <div class="knob xs" data-param="L.piano.B.level" data-value="0.8" data-label="Level">
-              </div>
               <div class="lstep">
                 <span>                Oct
 </span>
@@ -391,7 +429,7 @@
             </div>
           </div>
           <div class="sec-body">
-            <div class="fader" data-param="pianoLevel" data-value="0.8">
+            <div class="fader" data-param="L.piano.A.level" data-value="0.8" data-label="Level" aria-label="Level Canal A" title="Volume do Canal A">
               <span>              Level
 </span>
             </div>
@@ -401,11 +439,16 @@
                   Solte .sf2, .npno, .nsmp3, .nsmp4 ou .wav aqui
                 </li>
               </ul>
-              <button type="button" class="btn load-btn" id="loadBtn">
-                <i class="ic" data-icon="piano" data-size="13"></i>
-                <span id="loadLabel">                Load
-</span>
-              </button>
+              <div class="load-btn-group">
+                <button type="button" class="btn load-btn" id="loadBtn">
+                  <i class="ic" data-icon="piano" data-size="13"></i>
+                  <span id="loadLabel">Load</span>
+                </button>
+                <button type="button" class="btn load-btn remove-btn" id="removeBtn" title="Remover timbre selecionado da lista">
+                  <span class="led"></span>
+                  Remove
+                </button>
+              </div>
               <input type="file" id="fileInput" accept=".sf2,.npno,.nsmp3,.nsmp4,.wav,.svz,audio/wav,audio/x-wav" multiple="" hidden="" />
             </div>
             <div class="col">
@@ -503,28 +546,39 @@
             <div class="seg" id="segNum" role="status">
             </div>
             <div class="prog-btns">
+              <button type="button" class="btn" id="importProgBtn" title="Importar banco de presets (JSON)">
+                <span class="led"></span>
+                <i class="ic" data-icon="upload" data-size="11"></i>
+                Import
+              </button>
+              <button type="button" class="btn" id="exportProgBtn" title="Exportar banco de presets (JSON)">
+                <span class="led"></span>
+                <i class="ic" data-icon="download" data-size="11"></i>
+                Export
+              </button>
               <button type="button" class="btn" id="storeBtn" title="Store: clique para armar a gravação e selecione um slot 1-8">
                 <span class="led"></span>
-                <i class="ic" data-icon="save" data-size="13"></i>
+                <i class="ic" data-icon="save" data-size="11"></i>
                 Store
               </button>
               <button type="button" class="btn" id="sustainBtn">
                 <span class="led"></span>
-                <i class="ic" data-icon="pedal" data-size="13"></i>
+                <i class="ic" data-icon="pedal" data-size="11"></i>
                 Sustain
               </button>
               <button type="button" class="btn" id="panicBtn">
                 <span class="led"></span>
-                <i class="ic" data-icon="alert" data-size="13"></i>
+                <i class="ic" data-icon="alert" data-size="11"></i>
                 Panic
               </button>
             </div>
+            <input type="file" id="importProgFile" accept=".json" hidden />
           </div>
           <div class="oled">
             <div class="oled-status" id="oledStatus" aria-hidden="true">
             </div>
             <div class="oled-title" id="oledTitle">
-              LabPiano
+              WorkestraPiano
             </div>
             <div class="oled-line" id="oledLine1">
               Carregue um SoundFont
@@ -603,8 +657,9 @@
                 <span class="led"></span>
                 <b>B</b>
               </button>
+              <div class="knob xs" data-param="L.synth.B.level" data-value="0.8" data-label="Level" aria-label="Level Canal B" title="Volume do Canal B">
+              </div>
               <div class="lctl" data-l="A">
-                <div class="knob xs" data-param="L.synth.A.level" data-value="0.8" data-label="Level"></div>
                 <div class="lstep">
                   <span>Oct</span>
                   <button type="button" class="mini" data-loct="synth:A:-1" aria-label="Oitava da layer A abaixo">−</button>
@@ -619,7 +674,6 @@
                 </div>
               </div>
               <div class="lctl" data-l="B">
-                <div class="knob xs" data-param="L.synth.B.level" data-value="0.8" data-label="Level"></div>
                 <div class="lstep">
                   <span>Oct</span>
                   <button type="button" class="mini" data-loct="synth:B:-1" aria-label="Oitava da layer B abaixo">−</button>
@@ -635,7 +689,7 @@
               </div>
             </div>
             <div class="sec-body">
-              <div class="fader" data-param="synthLevel" data-value="0.6">
+              <div class="fader" data-param="L.synth.A.level" data-value="0.8" data-label="Level" aria-label="Level Canal A" title="Volume do Canal A">
                 <span>Level</span>
               </div>
               <div class="lpane syn-blocks" data-l="A">
@@ -738,24 +792,6 @@
                 </div>
               </div>
             </div>
-            <!-- Modo Sample (SF2/Timbres) -->
-            <div class="sample-row" id="sampleRow">
-              <div class="lcd" id="synthLcd" role="status" aria-live="polite">
-                <span class="lcd-name" id="synthLcdName">Sample</span>
-                <span class="lcd-sub" id="synthLcdSub">Escolha um SF2</span>
-                <i class="lcd-bar"><b id="synthLcdBar"></b></i>
-              </div>
-              <div class="preset-nav" role="group" aria-label="Preset do sample">
-                <button type="button" class="mini" id="presetPrev" aria-label="Preset anterior">‹</button>
-                <button type="button" class="mini" id="presetNext" aria-label="Próximo preset">›</button>
-              </div>
-              <ul class="type-list sm" id="synthList" aria-label="SF2 do Synth"></ul>
-              <button type="button" class="btn small" id="synthLoadBtn">
-                <span class="led"></span>
-                Load SF2
-              </button>
-              <input type="file" id="synthFileInput" accept=".sf2,.npno,.nsmp3,.nsmp4,.wav,.svz,audio/wav,audio/x-wav" hidden />
-            </div>
             <aside class="amp-col">
               <div class="lpane amp-filter-box" data-l="A">
                 <div class="amp-blk">
@@ -811,6 +847,11 @@
               <button type="button" class="mini" data-oct="synth:-1" aria-label="Oitava abaixo (synth)">−</button>
               <span class="seg-sm" data-octv="synth" role="status"></span>
               <button type="button" class="mini" data-oct="synth:1" aria-label="Oitava acima (synth)">+</button>
+              <button type="button" class="btn small" id="synthLoadBtn">
+                <span class="led"></span>
+                Load SF2
+              </button>
+              <input type="file" id="synthFileInput" accept=".sf2,.npno,.nsmp3,.nsmp4,.wav,.svz,audio/wav,audio/x-wav" hidden />
             </footer>
           </div>
 
@@ -825,8 +866,9 @@
                 <span class="led"></span>
                 <b>B</b>
               </button>
+              <div class="knob xs" data-param="L.strings.B.level" data-value="0.8" data-label="Level" aria-label="Level Canal B" title="Volume do Canal B">
+              </div>
               <div class="lctl" data-l="A">
-                <div class="knob xs" data-param="L.strings.A.level" data-value="0.8" data-label="Level"></div>
                 <div class="lstep">
                   <span>Oct</span>
                   <button type="button" class="mini" data-loct="strings:A:-1" aria-label="Oitava da layer A abaixo">−</button>
@@ -841,7 +883,6 @@
                 </div>
               </div>
               <div class="lctl" data-l="B">
-                <div class="knob xs" data-param="L.strings.B.level" data-value="0.8" data-label="Level"></div>
                 <div class="lstep">
                   <span>Oct</span>
                   <button type="button" class="mini" data-loct="strings:B:-1" aria-label="Oitava da layer B abaixo">−</button>
@@ -857,17 +898,23 @@
               </div>
             </div>
             <div class="sec-body">
-              <div class="fader" data-param="stringsLevel" data-value="0.7">
+              <div class="fader" data-param="L.strings.A.level" data-value="0.8" data-label="Level" aria-label="Level Canal A" title="Volume do Canal A">
                 <span>Level</span>
               </div>
               <div class="col grow">
                 <ul class="type-list" id="stringsList">
                   <li class="empty">Solte .sf2, .npno, .nsmp3, .nsmp4 ou .wav aqui</li>
                 </ul>
-                <button type="button" class="btn load-btn" id="stringsLoadBtn">
-                  <i class="ic" data-icon="strings" data-size="13"></i>
-                  <span id="stringsLoadLabel">Load</span>
-                </button>
+                <div class="load-btn-group">
+                  <button type="button" class="btn load-btn" id="stringsLoadBtn">
+                    <i class="ic" data-icon="strings" data-size="13"></i>
+                    <span id="stringsLoadLabel">Load</span>
+                  </button>
+                  <button type="button" class="btn load-btn remove-btn" id="stringsRemoveBtn" title="Remover timbre selecionado da lista">
+                    <span class="led"></span>
+                    Remove
+                  </button>
+                </div>
                 <input type="file" id="stringsFileInput" accept=".sf2,.npno,.nsmp3,.nsmp4,.wav,.svz,audio/wav,audio/x-wav" multiple hidden />
               </div>
             </div>
@@ -1264,11 +1311,11 @@
           </button>
         </div>
         <div class="wordmark">
-          <span class="wm-name">          labpiano
+          <span class="wm-name">          WorkestraPiano
 </span>
           <span class="wm-sub">          Organ · Piano · Synth
 </span>
-          <span class="wm-ver" title="Versão do LabPiano (a mesma do app nativo)">          v0.1.0
+          <span class="wm-ver" title="Versão do WorkestraPiano (a mesma do app nativo)">          v1.0
 </span>
         </div>
       </div>

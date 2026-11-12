@@ -38,11 +38,15 @@ function createStrings(output) {
   const api = {
     init() {
       ready ??= (async () => {
+        console.log("Strings init");
         await registerWorklet();
         synth = new JSSynth.AudioWorkletNodeSynthesizer();
         synth.init(ctx.sampleRate);
+        console.log("Strings synth init");
         const node = synth.createAudioNode(ctx, { reverbActive: false, chorusActive: false, polyphony: 512, initialGain: 0.5 });
+        console.log("Strings node created", node);
         node.connect(output);
+        console.log("Strings node connected to", output);
       })();
       return ready;
     },
@@ -88,7 +92,7 @@ function createStrings(output) {
       current = null;
     },
     loaded: () => current?.source ?? null,
-    noteOn: (note, vel) => current && synth.midiNoteOn(CH, note, vel),
+    noteOn: (note, vel) => { console.log("Strings noteOn", note, vel); return current && synth.midiNoteOn(CH, note, vel); },
     noteOff: (note) => current && synth.midiNoteOff(CH, note),
     sustain: (down) => synth?.midiControl(CH, 64, down ? 127 : 0),
     pitchBend: (v) => synth?.midiPitchBend(CH, v),

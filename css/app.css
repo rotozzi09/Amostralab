@@ -11,6 +11,9 @@
   --mod-line: #0d0e10;
   --ink: #f1f1f1;
   --ink-dim: #a3a8ae;
+  --ws-theme-color: #ff3a2e; /* Fallback para temas */
+  --ws-sub-color: #fff;
+  --ws-header-color: #fff;
   --led: #ff2b17;
   --led-off: #3d0f0b;
   --led-glow: 0 0 4px 1px #ff2b17cc, 0 0 10px 2px #ff2b1755;
@@ -48,7 +51,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   width: calc(100% - 32px);
   background:
     var(--grain),
-    linear-gradient(180deg, #e0352c 0, #c41e1c 1.2%, var(--red) 4%, #b01718 60%, #9d1414 96%, #6e0e0d 100%);
+    var(--ws-chassis-bg, linear-gradient(180deg, #e0352c 0, #c41e1c 1.2%, var(--red) 4%, #b01718 60%, #9d1414 96%, #6e0e0d 100%));
   background-blend-mode: soft-light, normal;
   border-radius: 14px 14px 10px 10px;
   box-shadow:
@@ -57,6 +60,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   padding: 16px 34px 0;
   user-select: none;
   -webkit-user-select: none;
+  transition: background 0.3s ease;
 }
 /* Bochechas laterais em alumínio fundido */
 .instrument::before, .instrument::after {
@@ -198,7 +202,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   transform: rotate(var(--a)) translateY(calc(-1 * var(--r)));
   transition: background .06s, box-shadow .06s;
 }
-.knob .ring i.lit { background: radial-gradient(circle, #ffe1d8 0, #ff4a2c 50%, #d8170b 100%); box-shadow: var(--led-glow); }
+.knob .ring i.lit { background: radial-gradient(circle, #ffe1d8 0, #ff4a2c 50%, #d8170b 100%); box-shadow: 0 0 3px #ff3b2a; }
 /* sombra no painel */
 .knob .wrap::before {
   content: ""; position: absolute; inset: var(--skirt); border-radius: 50%;
@@ -331,12 +335,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .oled {
-  position: relative; flex: 1; min-width: 0; padding: 6px 9px 7px; border-radius: 3px;
+  position: relative; flex: 1; min-width: 0; padding: 7px 10px; border-radius: 3px;
   background: radial-gradient(ellipse at 50% 30%, #0a1016, #020304 80%);
   box-shadow: inset 0 0 0 1px #000, inset 0 0 14px #000;
-  font: 11px/1.4 var(--mono); color: #d9eeff; letter-spacing: .4px;
+  font: 12px/1.35 var(--mono); color: #d9eeff; letter-spacing: .5px;
   text-shadow: 0 0 2px #a8d8ff99, 0 0 6px #6ab8ff44;
   -webkit-font-smoothing: none; font-smooth: never;
+  display: flex; flex-direction: column; justify-content: space-between;
 }
 .oled::after { /* grade de pixels + vidro */
   content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
@@ -345,10 +350,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
     repeating-linear-gradient(0deg, #0000008c 0 1px, transparent 1px 2px),
     repeating-linear-gradient(90deg, #00000059 0 1px, transparent 1px 2px);
 }
-.oled-title { font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.oled-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.oled-title { font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: 1.1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.oled-line { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .oled .dim, .dim { opacity: .6; }
-.oled-bar { margin-top: 5px; height: 4px; background: #d9eeff1a; box-shadow: inset 0 0 0 1px #d9eeff33; }
+.oled-bar { margin-top: auto; height: 4px; background: #d9eeff1a; box-shadow: inset 0 0 0 1px #d9eeff33; border-radius: 2px; }
 .oled-bar i { display: block; height: 100%; width: 0; background: #d9eeff; box-shadow: 0 0 4px #a8d8ff; transition: width .15s; }
 .programs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px 8px; padding: 2px 1px 3px; }
 .programs .btn { justify-content: center; padding: 6px 0; }
@@ -359,24 +364,31 @@ button { font: inherit; color: inherit; cursor: pointer; }
   background: #16171a; border-radius: 3px; box-shadow: inset 0 2px 4px #000, 0 1px 0 #ffffff14;
   scrollbar-width: thin; scrollbar-color: #555 transparent;
 }
-.type-list li { font-size: 10px; }
-.type-list li.empty { color: var(--ink-dim); font-size: 10px; border: 1px dashed #ffffff33; padding: 10px 8px; border-radius: 3px; text-align: center; }
+.type-list li { font-size: 13px; }
+.type-list li.empty { color: var(--ink-dim); font-size: 11px; border: 1px dashed #ffffff33; padding: 10px 8px; border-radius: 3px; text-align: center; }
 .type-list button {
-  width: 100%; background: transparent; border: 0; padding: 3px 5px; display: flex; gap: 7px; align-items: center; text-align: left;
-  color: #d3d6da; font-size: 10px; border-radius: 2px;
+  width: 100%; background: transparent; border: 0; padding: 5px 6px; display: flex; gap: 8px; align-items: center; text-align: left;
+  color: #d6dade; font-size: 15px; font-weight: 500; letter-spacing: .2px; border-radius: 2px;
 }
-.type-list button:hover { background: #ffffff10; color: #fff; }
-.type-list button.on { color: #fff; background: #ffffff0a; }
-.type-list button .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.type-list button .sz { color: var(--ink-dim); font-size: 9px; font-variant-numeric: tabular-nums; }
-#loadBtn { align-self: flex-start; margin-top: 6px; }
+.type-list button:hover { background: #ffffff14; color: #fff; }
+.type-list button.on { color: #fff; background: #ffffff10; font-weight: 700; text-shadow: 0 0 6px #ffffff44; }
+.type-list button .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25; }
+.type-list button .sz, .type-list button .tg { display: none; }
+.load-btn-group { display: flex; gap: 4px; width: 178px; margin-top: 6px; }
+.load-btn-group .load-btn { flex: 1; min-width: 0; justify-content: center; padding: 5px 2px; font-size: 10.5px; }
 
 /* Layer Effects e a marca dividem a última coluna, como no painel original. */
 .m-fx { grid-column: 6; grid-row: 1; align-self: start; justify-self: stretch; }
 .wordmark { grid-column: 6; grid-row: 1; align-self: end; }
 .wordmark { display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; padding: 0 4px 2px; color: #fff; min-width: 0; text-shadow: 0 1px 0 #0004; }
-.wm-name { font: 300 36px/1 var(--font); letter-spacing: -.8px; }
-.wm-sub { font-size: 8px; font-weight: 700; letter-spacing: 2.4px; text-transform: uppercase; opacity: .85; margin-top: 5px; text-align: right; text-wrap: balance; }
+.wm-name {
+  font: 300 36px/1 var(--font);
+  letter-spacing: -.8px;
+  color: var(--ws-brand-color, #fff);
+  text-shadow: 0 1px 0 #0004, 0 0 15px var(--ws-theme-glow, transparent);
+  transition: color 0.3s ease, text-shadow 0.3s ease, background 0.3s ease;
+}
+.wm-sub { font-size: 8px; font-weight: 700; letter-spacing: 2.4px; text-transform: uppercase; opacity: .85; margin-top: 5px; text-align: right; text-wrap: balance; color: var(--ws-sub-color, #fff); }
 
 /* ---------- Pitch stick e mod wheel ---------- */
 .keybed { display: flex; gap: 14px; margin-top: 10px; align-items: stretch; }
@@ -582,7 +594,7 @@ body.is-loading-sound .keybed { filter: saturate(.4) brightness(.55); }
 .knob .skirt, .knob .cap b { transition: transform .09s ease-out; }
 .knob.grab .skirt, .knob.grab .cap b { transition: none; }
 .knob:hover .cap { filter: brightness(1.1); }
-.knob:hover .ring i.lit { box-shadow: 0 0 5px 1px #ff2b17ee, 0 0 14px 3px #ff2b1766; }
+.knob:hover .ring i.lit { box-shadow: 0 0 4px #ff3b2a; }
 .knob .val, .fader .val {
   position: absolute; left: 50%; top: -4px; z-index: 6;
   transform: translate(-50%, -100%) scale(.7); opacity: 0;
@@ -611,24 +623,16 @@ body.is-loading-sound .keybed { filter: saturate(.4) brightness(.55); }
   18% { opacity: 1; filter: brightness(1.6); }
   100% { opacity: 1; filter: none; }
 }
-@keyframes oled-breathe {
-  50% { text-shadow: 0 0 3px #a8d8ffcc, 0 0 10px #6ab8ff66; }
-}
-.oled { animation: oled-on 1.1s ease-out .35s both, oled-breathe 5.5s ease-in-out 1.6s infinite; }
+.oled { animation: oled-on 1.1s ease-out .35s both; }
 .seg, .seg-sm { animation: oled-on .9s ease-out .5s both; }
-.oled::before { /* faixa de varredura lenta */
-  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 30%; pointer-events: none; border-radius: inherit;
-  background: linear-gradient(180deg, transparent, #9fd2ff0d 50%, transparent);
-  animation: oled-scan 4.5s linear infinite;
-}
-@keyframes oled-scan { from { transform: translateY(-100%); } to { transform: translateY(340%); } }
+.oled::before { display: none; }
 
 /* Medidor master: os LEDs acendem com um rastro curto. */
 .meter i { transition: background .08s, box-shadow .08s; }
 
 /* Marca: um reflexo passa pelo nome ao carregar. */
 .wm-name {
-  background: linear-gradient(100deg, #fff 42%, #ffd6cc 50%, #fff 58%) 100% 0 / 260% 100% no-repeat;
+  background: linear-gradient(100deg, var(--ws-brand-color, #fff) 42%, #fff 50%, var(--ws-brand-color, #fff) 58%) 100% 0 / 260% 100% no-repeat;
   -webkit-background-clip: text; background-clip: text; color: transparent;
   animation: wm-shine 2.8s ease-in-out 1.2s 1 both;
 }
@@ -750,6 +754,21 @@ body.is-loading-sound .keybed { filter: saturate(.4) brightness(.55); }
 .type-list.sm button { padding: 2px 5px; font-size: 9.5px; }
 /* No modo Sample o display acende em vermelho, como os LEDs. */
 .m-synth:has(#oscSel button[data-osc="sample"].on) .lcd { box-shadow: inset 0 0 0 1px #000, inset 0 0 12px #000, 0 0 0 1px #ff3b2a55, 0 0 14px -4px #ff2b1766; }
+.load-btn-group {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+  margin-top: 8px;
+}
+.load-btn-group .load-btn {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  height: 28px;
+  justify-content: center;
+  padding: 0 4px;
+  font-size: 10px;
+}
 @media (max-width: 640px) {
   .sample-row { grid-template-columns: minmax(0, 1fr) auto; }
   .type-list.sm, #synthLoadBtn { grid-column: 1 / -1; }
@@ -789,8 +808,8 @@ body.is-loading-sound .keybed { filter: saturate(.4) brightness(.55); }
   content: ""; flex: 1; height: 1px; margin-left: 4px; background: linear-gradient(90deg, #ffffffb3, #ffffff33);
 }
 .module > h2, .sec-head h2 {
-  font: 700 17px/1 var(--font); letter-spacing: 2.6px; text-transform: uppercase; color: #fff;
-  text-shadow: 0 1px 0 #0005;
+  font: 700 17px/1 var(--font); letter-spacing: 2.6px; text-transform: uppercase; color: var(--ws-header-color, #fff);
+  text-shadow: 0 1px 0 #0005, var(--ws-header-shadow, none);
 }
 .sec-head h2 {
   flex: 1; display: flex; align-items: center; gap: 9px; margin: 0;
@@ -856,12 +875,10 @@ body.is-loading-sound .keybed { filter: saturate(.4) brightness(.55); }
 .on > .led, .btn.on .led {
   box-shadow: 0 0 0 1.5px #0b0b0c, 0 0 6px 2px #ff2b17cc, 0 0 16px 4px #ff2b1755;
 }
-.knob .ring i.lit { box-shadow: 0 0 5px 1px #ff2b17dd, 0 0 12px 2px #ff2b1755; }
+.knob .ring i.lit { box-shadow: 0 0 3px #ff3b2a; }
 
 /* Displays: OLED e LCD em Share Tech Mono; 7 segmentos com vidro. */
 .oled, .lcd { font-family: var(--mono); letter-spacing: .6px; }
-.oled-title { font: 400 17px/1.3 var(--mono); letter-spacing: 1.2px; }
-.oled { padding: 9px 12px 10px; }
 .seg::after, .seg-sm::after {
   background:
     linear-gradient(165deg, #ffffff22 0, #ffffff08 38%, transparent 39%),
@@ -1335,4 +1352,4 @@ body.midi-learn [data-learn].learn-armed { outline: 2px solid #ff3b2a; animation
   min-width: 80px;
   height: 28px;
   justify-content: center;
-}
+}

@@ -99,14 +99,14 @@ export function mountWorkstation({ noteOn, noteOff, allNotesOff, noteName, oled 
   }
 
   // ---------- Chord memory ----------
-  group($("chordType"), "chord", st.chord.type, (v) => { st.chord.type = v; persist(); });
+  const showChordType = group($("chordType"), "chord", st.chord.type, (v) => { st.chord.type = v; persist(); });
   const showChord = toggle($("chordBtn"), (on) => { releaseAll(); st.chord.on = on; });
   const expand = (k) => (st.chord.on ? CHORDS[st.chord.type].map((i) => k + i) : [k]);
 
   // ---------- Arpejador ----------
-  group($("arpType"), "arp", st.arp.type, (v) => { st.arp.type = v; persist(); });
-  group($("arpRate"), "rate", st.arp.rate, (v) => { st.arp.rate = v; persist(); });
-  group($("arpOct"), "oct", st.arp.oct, (v) => { st.arp.oct = +v; persist(); });
+  const showArpType = group($("arpType"), "arp", st.arp.type, (v) => { st.arp.type = v; persist(); });
+  const showArpRate = group($("arpRate"), "rate", st.arp.rate, (v) => { st.arp.rate = v; persist(); });
+  const showArpOct = group($("arpOct"), "oct", st.arp.oct, (v) => { st.arp.oct = +v; persist(); });
   const showArp = toggle($("arpBtn"), (on) => { releaseAll(); st.arp.on = on; });
   const held = new Map(); // nota segurada → velocity (ordem de chegada)
   let arpStop = null;
@@ -308,7 +308,7 @@ export function mountWorkstation({ noteOn, noteOff, allNotesOff, noteName, oled 
   function padUp(i) {
     if (st.padMode === "note") keyOff(PAD_BASE + i);
   }
-  group($("padMode"), "pmode", st.padMode, (v) => {
+  const showPadMode = group($("padMode"), "pmode", st.padMode, (v) => {
     releaseAll();
     st.padMode = v;
     persist();
@@ -458,6 +458,50 @@ export function mountWorkstation({ noteOn, noteOff, allNotesOff, noteName, oled 
       showArp(false); st.arp.on = false;
       showChord(false); st.chord.on = false;
       drawPads();
+    },
+    getState() {
+      return {
+        bpm: st.bpm,
+        padMode: st.padMode,
+        arp: { ...st.arp },
+        chord: { ...st.chord },
+        steps: [...st.steps],
+        pads: st.pads.map((p) => (p?.url ? { name: p.name, url: p.url, kind: p.kind } : p?.name ? { name: p.name, kind: p.kind } : null)),
+      };
+    },
+    setState(wState) {
+      if (!wState) return;
+      if (typeof wState.bpm === "number") setBpm(wState.bpm);
+      if (wState.padMode) { st.padMode = wState.padMode; showPadMode(st.padMode); }
+      if (wState.arp) {
+        st.arp = { ...st.arp, ...wState.arp };
+        showArp(st.arp.on);
+        showArpType(st.arp.type);
+        showArpRate(st.arp.rate);
+        showArpOct(st.arp.oct);
+      }
+      if (wState.chord) {
+        st.chord = { ...st.chord, ...wState.chord };
+        showChord(st.chord.on);
+        showChordType(st.chord.type);
+      }
+      if (Array.isArray(wState.steps)) {
+        st.steps = [...wState.steps];
+        drawSteps();
+      }
+      if (Array.isArray(wState.pads)) {
+        wState.pads.forEach((p, i) => {
+          if (!p) {
+            st.pads[i] = null;
+          } else if (p.url) {
+            st.pads[i] = { name: p.name, url: p.url, kind: p.kind };
+          } else if (p.name) {
+            st.pads[i] = { name: p.name, kind: p.kind, buffer: st.pads[i]?.buffer };
+          }
+        });
+        drawPads();
+      }
+      persist();
     },
   };
 }

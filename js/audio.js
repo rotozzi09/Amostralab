@@ -292,7 +292,7 @@ function makeStrip(name) {
   s.ampDry = new GainNode(ctx, { gain: 1 });
   s.ampWet = new GainNode(ctx, { gain: 0 });
   s.ampHp = new BiquadFilterNode(ctx, { type: "highpass", frequency: 80, Q: 0.6 });
-  s.shaper = new WaveShaperNode(ctx, { oversample: "4x" });
+  s.shaper = new WaveShaperNode(ctx, { oversample: "2x" });
   s.cabHp = new BiquadFilterNode(ctx, { type: "highpass", frequency: 80, Q: 0.7 });
   s.body = new BiquadFilterNode(ctx, { type: "peaking", frequency: 120, Q: 1, gain: 0 });
   s.presence = new BiquadFilterNode(ctx, { type: "peaking", frequency: 2500, Q: 0.9, gain: 0 });
@@ -627,7 +627,7 @@ percGain.connect(vibDelay).connect(vibLp).connect(vibWet);
 // Preamp: HP 60 Hz → curva valvulada assimétrica ("Vintage Combo" do LabGuitar) com 4× de
 // oversampling → DC block → LP 6,5 kHz (amplificador do Leslie).
 const preHp = new BiquadFilterNode(ctx, { type: "highpass", frequency: 60, Q: 0.6 });
-const drive = new WaveShaperNode(ctx, { oversample: "4x" });
+const drive = new WaveShaperNode(ctx, { oversample: "2x" });
 const dcBlock = new BiquadFilterNode(ctx, { type: "highpass", frequency: 12, Q: 0.6 });
 const ampLp = new BiquadFilterNode(ctx, { type: "lowpass", frequency: 6500, Q: 0.6 });
 vibDry.connect(preHp);

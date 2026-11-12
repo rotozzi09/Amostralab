@@ -1,10 +1,10 @@
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/sw.js").catch(() => {});
+  navigator.serviceWorker.register("/sw.js?v=6").catch(() => {});
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     window.location.reload();
   });
 }
-console.log("LabPiano App v3 loading...");
+console.log("LabPiano App v6 loading...");
 
 // Liga painel, motores e leitor. Programas (A:01–A:08) guardam o painel inteiro no navegador.
 // Layers A/B, zonas, split, amp e efeitos seguem o app nativo (Source/PluginEditor.cpp).
@@ -20,6 +20,7 @@ import { mountTabs, mountKeyNav } from "./mobile.js";
 import { mountMidiLearn } from "./midilearn.js";
 import { mountWorkstation } from "./workstation.js";
 import { mountAudioMidi } from "./audiomidi.js";
+import { checkCachedSf2, saveCachedSf2, getCachedSf2, setCachedSf2, getHashCacheKey, getCachedBlob, setCachedBlob } from "./soundcache.js";
 
 const $ = (id) => document.getElementById(id);
 let access = { full: true };
@@ -36,12 +37,27 @@ async function setup() {
 
     loadUrlParamSound().then((embedded) => {
       if (!embedded) loadServerSounds().then(() => {
-        if (sounds.length && loadedIndex.A < 0) selectPiano(0, "A");
-        else if (!loading) loadNoticeDone();
+        const lastIdx = (() => {
+          try {
+            const saved = localStorage.getItem("labpiano.last_program");
+            if (saved !== null && programs[Number(saved)]) return Number(saved);
+          } catch {}
+          return programs[0] ? 0 : -1;
+        })();
+
+        if (lastIdx >= 0 && programs[lastIdx]) {
+          state.program = lastIdx;
+          recall(programs[lastIdx]);
+          showProgram();
+          oled(`Program ${lastIdx + 1}`, "Preset restaurado", layerSummary());
+        } else if (pianoSounds.length && loadedIndex.A < 0) {
+          selectPiano(0, "A");
+        }
+        if (!loading) loadNoticeDone();
       });
     });
     loadUrlParamSynth();
-    oled("LabPiano", "Carregue um SoundFont", layerSummary());
+    if (!programs[0]) oled("WorkestraPiano", "Carregue um SoundFont", layerSummary());
   } catch (e) {
     console.error("Setup error:", e);
     loadNoticeDone();
@@ -60,7 +76,9 @@ const state = {
   program: 0,
   splitArmed: false,
 };
-const sounds = []; // { name, size, file? , url? }
+const pianoSounds = [];
+const synthSounds = [];
+const stringsSounds = [];
 const loadedIndex = { A: -1, B: -1 }; // piano carregado em cada layer
 let loading = null;
 let pending = null;
@@ -300,6 +318,7 @@ const midiLearn = mountMidiLearn({ root: $("instrument"), button: $("midiBtn"), 
 
 // ---------- Seções e layers ----------
 function setOn(section, on) {
+  console.log("setOn", section, on);
   state.on[section] = on;
   const btn = document.querySelector(`[data-on="${section}"]`);
   if (btn) {
@@ -370,6 +389,7 @@ function refreshLayers() {
   for (const s of SECTIONS) {
     const el = document.querySelector(`[data-section="${s}"]`) || document.querySelector(`.m-synth`);
     if (!el) continue;
+    el.dataset.focus = state.focus[s];
     el.querySelectorAll(`.lbtn[data-lsec="${s}"]`).forEach((b) => {
       const on = layers.get(s, b.dataset.layer).on;
       b.classList.toggle("on", on);
@@ -597,9 +617,8 @@ function renderPianoList() {
   const L = state.focus.piano;
   const cur = loadedIndex[L];
   const none = L === "B" ? `<li><button data-i="-1" class="${cur < 0 ? "on" : ""}"><span class="led"></span><span class="nm">Nenhum</span></button></li>` : "";
-  if (!sounds.length && !none) { ul.innerHTML = `<li class="empty">Solte .sf2, .npno, .nsmp3, .nsmp4 ou .wav aqui</li>`; renderSynthList(); return; }
-  ul.innerHTML = none + sounds.map((s, i) => `<li><button data-i="${i}" class="${i === cur ? "on" : ""}"><span class="led"></span><span class="nm">${s.name.replace(EXT, "")}</span><em class="tg ${s.fantom ? "fantom" : s.nord ? "nord" : s.wav ? "wav" : ""}">${tag(s)}</em><span class="sz">${Math.round(s.size / 1048576)}M</span></button></li>`).join("");
-  renderSynthList();
+  if (!pianoSounds.length && !none) { ul.innerHTML = `<li class="empty">Solte .sf2, .npno, .nsmp3, .nsmp4 ou .wav aqui</li>`; return; }
+  ul.innerHTML = none + pianoSounds.map((s, i) => `<li><button data-i="${i}" class="${i === cur ? "on" : ""}" title="${s.name.replace(EXT, "")}"><span class="led"></span><span class="nm">${s.name.replace(EXT, "")}</span></button></li>`).join("");
 }
 $("pianoList").addEventListener("click", (e) => { const b = e.target.closest("button[data-i]"); if (b) selectPiano(+b.dataset.i, state.focus.piano); });
 
@@ -607,7 +626,7 @@ $("pianoList").addEventListener("click", (e) => { const b = e.target.closest("bu
 async function selectPiano(i, L = "A") {
   if (loading) {
     pending = [i, L];
-    oled(null, null, `Na fila: ${sounds[i]?.name.replace(EXT, "") ?? "Nenhum"}`);
+    oled(null, null, `Na fila: ${pianoSounds[i]?.name.replace(EXT, "") ?? "Nenhum"}`);
     return;
   }
   allNotesOff();
@@ -618,7 +637,7 @@ async function selectPiano(i, L = "A") {
     oled("Layer B sem piano", null, layerSummary(), 0);
     return;
   }
-  const s = sounds[i];
+  const s = pianoSounds[i];
   const before = loadedIndex[L];
   loadedIndex[L] = i;
   renderPianoList();
@@ -626,7 +645,7 @@ async function selectPiano(i, L = "A") {
     let failed = false;
     try {
       loadNotice(s.name.replace(EXT, ""), "Lendo o arquivo…", 0.04);
-      const src = s.nord ? await nordSource(s) : s.fantom ? await fantomSource(s) : s.wav ? await wavSource(s) : s;
+      const src = await getSf2Source(s);
       oled(src.name.replace(/\.sf2$/i, ""), "Lendo SF2…", null, 0);
       const sf = await readSf2(src);
       const firstPreset = sf.presets[0];
@@ -668,55 +687,110 @@ async function selectPiano(i, L = "A") {
   })();
 }
 
-// Arquivo Nord (.npno/.nsmp3/.nsmp4): convertido em SF2 no próprio navegador (js/nord.js) na 1ª vez.
+// Obtém a fonte .sf2 para o FluidSynth: verifica o IndexedDB antes de processar/converter qualquer arquivo.
+// Se o arquivo já foi convertido anteriormente e está salvo no cache, carrega-o diretamente do IndexedDB para economizar CPU.
+async function getSf2Source(s) {
+  if (s.converted) return s.converted;
+
+  // 1. Verifica no IndexedDB se já existe o .sf2 em cache
+  const cached = await checkCachedSf2(s);
+  if (cached) {
+    oled(s.name.replace(EXT, ""), "Carregado do cache", layerSummary(), 0.05);
+    loadNotice(s.name.replace(EXT, ""), "Carregando do cache IndexedDB (zero CPU)…", 0.05);
+    return cached;
+  }
+
+  // 2. Se for formato que necessita de conversão, executa o conversor específico
+  if (s.nord) return await nordSource(s);
+  if (s.fantom) return await fantomSource(s);
+  if (s.wav) return await wavSource(s);
+
+  // 3. Se for .sf2 original com Blob, salva no cache local para carregamento instantâneo futuro
+  if (s.file && s.file instanceof Blob) {
+    saveCachedSf2(s, s.file).catch(() => {});
+  }
+  return s;
+}
+
+// Arquivo Nord (.npno/.nsmp3/.nsmp4): convertido em SF2 com cache baseado em hash SHA-256 do conteúdo.
 async function nordSource(s) {
   if (s.converted) return s.converted;
+  const fileBytes = await (s.file ?? (await fetch(s.url))).arrayBuffer();
+  const cacheKey = await getHashCacheKey("nord", fileBytes);
+  const cachedBlob = await getCachedBlob(cacheKey);
+  if (cachedBlob) {
+    console.log(`[Cache] SF2 Nord recuperado do cache por hash (zero CPU): ${s.name}`);
+    s.converted = { name: s.name.replace(/\.(npno|nsmp|nsmp3|nsmp4)$/i, ".sf2"), size: cachedBlob.size, file: cachedBlob, slice: (a, b) => cachedBlob.slice(a, b) };
+    s.size = cachedBlob.size;
+    return s.converted;
+  }
   oled(s.name.replace(/\.(npno|nsmp|nsmp3|nsmp4)$/i, ""), "Convertendo Nord → SF2…", null, 0);
   loadNotice(s.name.replace(/\.(npno|nsmp|nsmp3|nsmp4)$/i, ""), "Convertendo o arquivo…", 0.05);
   const { nordToSf2 } = await import("./nord.js");
-  const bytes = new Uint8Array(await (s.file ?? (await fetch(s.url))).arrayBuffer());
+  const bytes = new Uint8Array(fileBytes);
   const out = await nordToSf2(bytes, { onProgress: (p) => {
     oled(null, `Convertendo Nord → SF2… ${Math.round(p * 100)}%`, null, p);
     loadNotice(null, `Convertendo o arquivo… ${Math.round(p * 100)}%`, p);
   } });
   const blob = new Blob([out.sf2], { type: "audio/x-soundfont" });
+  await setCachedBlob(cacheKey, blob, s.name);
   s.converted = { name: `${out.name}.sf2`, size: blob.size, file: blob, slice: (a, b) => blob.slice(a, b) };
   s.size = blob.size;
   return s.converted;
 }
 
-// Arquivo WAV (.wav): convertido em SF2 no próprio navegador (js/wav.js) na 1ª vez.
+// Arquivo WAV (.wav): convertido em SF2 com cache baseado em hash SHA-256 do conteúdo.
 async function wavSource(s) {
   if (s.converted) return s.converted;
+  const fileBytes = await (s.file ?? (await fetch(s.url))).arrayBuffer();
+  const cacheKey = await getHashCacheKey("wav", fileBytes);
+  const cachedBlob = await getCachedBlob(cacheKey);
+  if (cachedBlob) {
+    console.log(`[Cache] SF2 WAV recuperado do cache por hash (zero CPU): ${s.name}`);
+    s.converted = { name: s.name.replace(/\.wav$/i, ".sf2"), size: cachedBlob.size, file: cachedBlob, slice: (a, b) => cachedBlob.slice(a, b) };
+    s.size = cachedBlob.size;
+    return s.converted;
+  }
   oled(s.name.replace(/\.wav$/i, ""), "Convertendo WAV → SF2…", null, 0);
   loadNotice(s.name.replace(/\.wav$/i, ""), "Convertendo o áudio…", 0.05);
   const { wavToSf2 } = await import("./wav.js");
-  const bytes = new Uint8Array(await (s.file ?? (await fetch(s.url))).arrayBuffer());
+  const bytes = new Uint8Array(fileBytes);
   const out = await wavToSf2(bytes, { name: s.name.replace(/\.wav$/i, ""), onProgress: (p) => {
     oled(null, `Convertendo WAV → SF2… ${Math.round(p * 100)}%`, null, p);
     loadNotice(null, `Convertendo o áudio… ${Math.round(p * 100)}%`, p);
   } });
   const blob = new Blob([out.sf2], { type: "audio/x-soundfont" });
+  await setCachedBlob(cacheKey, blob, s.name);
   s.converted = { name: `${out.name}.sf2`, size: blob.size, file: blob, slice: (a, b) => blob.slice(a, b) };
   s.size = blob.size;
   return s.converted;
 }
 
-// Multisample do Roland Fantom (.svz): cada tom vira um SF2 no próprio navegador (js/fantom.js) na 1ª vez.
+// Multisample do Roland Fantom (.svz) com cache baseado em hash SHA-256 do conteúdo.
 async function fantomSource(s) {
   if (s.converted) return s.converted;
+  const res = s.file ?? (await fetch(s.url));
+  if (!s.file && !res.ok) throw new Error(`HTTP ${res.status} ao baixar ${s.name}`);
+  const fileBytes = await res.arrayBuffer();
+  const cacheKey = await getHashCacheKey("svz", fileBytes, s.tone);
+  const cachedBlob = await getCachedBlob(cacheKey);
+  if (cachedBlob) {
+    console.log(`[Cache] SF2 SVZ recuperado do cache por hash (zero CPU): ${s.name}`);
+    s.converted = { name: s.name.replace(/\.svz$/i, ".sf2"), size: cachedBlob.size, file: cachedBlob, slice: (a, b) => cachedBlob.slice(a, b) };
+    s.size = cachedBlob.size;
+    return s.converted;
+  }
   oled(s.name.replace(/\.svz$/i, ""), "Convertendo SVZ → SF2…", null, 0);
   loadNotice(s.name.replace(/\.svz$/i, ""), "Convertendo o arquivo…", 0.05);
   const { fantomToSf2 } = await import("./fantom.js");
-  const res = s.file ?? (await fetch(s.url));
-  if (!s.file && !res.ok) throw new Error(`HTTP ${res.status} ao baixar ${s.name}`);
-  const bytes = new Uint8Array(await res.arrayBuffer());
+  const bytes = new Uint8Array(fileBytes);
   const out = await fantomToSf2(bytes, { tone: s.tone, onProgress: (p) => {
     oled(null, `Convertendo SVZ → SF2… ${Math.round(p * 100)}%`, null, p);
     loadNotice(null, `Convertendo o arquivo… ${Math.round(p * 100)}%`, p);
   } });
   if (out.skipped.length) console.warn(`${s.name}: partials fora do SF2`, out.skipped);
   const blob = new Blob([out.sf2], { type: "audio/x-soundfont" });
+  await setCachedBlob(cacheKey, blob, s.name);
   s.converted = { name: `${out.name}.sf2`, size: blob.size, file: blob, slice: (a, b) => blob.slice(a, b) };
   s.size = blob.size;
   return s.converted;
@@ -736,7 +810,7 @@ async function fantomEntries(f) {
 const isNord = (name) => /\.(npno|nsmp|nsmp3|nsmp4)$/i.test(name);
 const isFantom = (name) => /\.svz$/i.test(name);
 const isWav = (name) => /\.wav$/i.test(name);
-async function addFiles(files) {
+async function addFiles(files, module = "piano") {
   if (!access.full) { lockedNotice(access, "Abrir outros SF2"); return; }
   files = [...files]; // o FileList do drop/input pode esvaziar depois do primeiro await
   let first = -1; // o arquivo aberto (ou o primeiro de vários) vai para a layer em foco
@@ -746,17 +820,23 @@ async function addFiles(files) {
       ? await fantomEntries(f)
       : [{ name: f.name, size: f.size, file: f, nord: isNord(f.name), wav: isWav(f.name), slice: (a, b) => f.slice(a, b) }];
     for (const e of entries) {
-      let i = sounds.findIndex((s) => s.name === e.name && s.file?.size === f.size);
+      const targetList = module === "piano" ? pianoSounds : (module === "strings" ? stringsSounds : synthSounds);
+      let i = targetList.findIndex((s) => s.name === e.name && s.file?.size === f.size);
       if (i < 0) {
-        sounds.push(e);
-        i = sounds.length - 1;
+        targetList.push({...e});
+        i = targetList.length - 1;
       }
       if (first < 0) first = i;
     }
   }
-  renderPianoList();
-  renderStringsList();
-  if (first >= 0) selectPiano(first, state.focus.piano);
+  if (module === "piano") renderPianoList();
+  else if (module === "strings") renderStringsList();
+  else if (module === "synth") renderSynthList();
+  if (first >= 0) {
+    if (module === "piano") selectPiano(first, state.focus.piano);
+    else if (module === "strings") selectStrings(first, state.focus.strings);
+    else if (module === "synth") selectSynthSound(first);
+  }
 }
 
 // Arquivos servidos pelo serve.mjs (pasta de SF2 configurada), lidos por Range sob demanda.
@@ -773,22 +853,24 @@ async function loadServerSounds() {
       const list = await res.json();
       if (Array.isArray(list)) {
         for (const s of list) {
-          if (sounds.some((x) => x.name === s.name)) continue;
-          sounds.push(urlSound(s.name, s.size, `sounds/${encodeURIComponent(s.name)}`));
+          if (!pianoSounds.some((x) => x.name === s.name)) {
+            pianoSounds.push(urlSound(s.name, s.size, `sounds/${encodeURIComponent(s.name)}`));
+          }
         }
       }
     }
   } catch { /* sem servidor de sons: usa default ou arrastar arquivos */ }
-  if (!sounds.length) {
+  if (!pianoSounds.length) {
     try {
       const { generateDefaultSound } = await import("./defaultSound.js");
-      sounds.push(generateDefaultSound());
+      pianoSounds.push(generateDefaultSound());
     } catch (err) {
       console.warn("Erro ao gerar som padrão:", err);
     }
   }
   renderPianoList();
   renderStringsList();
+  renderSynthList();
 }
 
 // Tamanho de um SF2 remoto: HEAD (Content-Length) ou GET Range bytes=0-0 (Content-Range ".../TOTAL").
@@ -814,7 +896,8 @@ async function loadUrlParamSound() {
   const file = decodeURIComponent(url.split(/[?#]/)[0].split("/").pop() || "piano.sf2");
   const name = q.get("name") || file;
   try {
-    sounds.unshift(urlSound(name, await remoteSize(url), url));
+    const sound = urlSound(name, await remoteSize(url), url);
+    pianoSounds.unshift(sound);
     renderPianoList();
     selectPiano(0, "A");
   } catch (err) {
@@ -825,39 +908,33 @@ async function loadUrlParamSound() {
 }
 
 // ---------- Synth no modo Sample: um SF2 do usuário (pads, cordas…) na layer A do Synth ----------
-// A biblioteca é a mesma do Piano (sounds): o que entra numa lista aparece na outra.
+// A biblioteca é independente para cada módulo.
 let synthIndex = -1;
 let synthPresets = [];
 let synthPreset = 0;
 
-function synthLcd(name, sub, progress) {
-  if (name != null) $("synthLcdName").textContent = name;
-  if (sub != null) $("synthLcdSub").textContent = sub;
-  $("synthLcdBar").style.width = `${Math.round((progress ?? 0) * 100)}%`;
-}
+function synthLcd(name, sub, progress) {}
 function renderSynthList() {
   const ul = $("synthList");
-  const list = sounds.map((s, i) => [s, i]).filter(([s]) => !s.nord && !s.fantom);
+  if (!ul) return;
+  const list = synthSounds.map((s, i) => [s, i]).filter(([s]) => !s.nord && !s.fantom);
   if (!list.length) { ul.innerHTML = `<li class="empty">Nenhum SF2</li>`; return; }
   ul.innerHTML = list.map(([s, i]) => `<li><button data-i="${i}" class="${i === synthIndex ? "on" : ""}"><span class="led"></span><span class="nm">${s.name.replace(/\.sf2$/i, "")}</span></button></li>`).join("");
 }
 function showSynthPreset() {
   const p = synthPresets[synthPreset];
-  synthLcd(null, p ? `${String(p.num).padStart(3, "0")} ${p.name}` : "Sem presets", 0);
-  $("presetPrev").disabled = $("presetNext").disabled = synthPresets.length < 2;
 }
 function selectSynthSound(i) {
   if (synthLoading) return;
-  const s = sounds[i];
+  const s = synthSounds[i];
   synthIndex = i;
+  if (s) state.synthName = s.name;
   renderSynthList();
   synthLoading = (async () => {
     try {
-      synthLcd(s.name.replace(EXT, ""), "Carregando…", 0);
       loadNotice(s.name.replace(EXT, ""), "Carregando o som…", 0.08);
-      const src = s.nord ? await nordSource(s) : s.fantom ? await fantomSource(s) : s.wav ? await wavSource(s) : s;
+      const src = await getSf2Source(s);
       const info = await sampler.load(src, (p) => {
-        synthLcd(null, `Carregando… ${Math.round(p * 100)}%`, p);
         loadNotice(null, `Carregando o som… ${Math.round(p * 100)}%`, Math.max(0.08, p));
       });
       synthPresets = info.presets || [];
@@ -867,7 +944,6 @@ function selectSynthSound(i) {
       if (!state.on.synth) setOn("synth", true);
     } catch (err) {
       console.error(err);
-      synthLcd(null, "Erro ao carregar", 0);
       loadNoticeFail(String(err.message || err));
     } finally {
       synthLoading = null;
@@ -882,20 +958,12 @@ function stepSynthPreset(d) {
   sampler.selectPreset(p.bank, p.num);
   showSynthPreset();
 }
-$("synthList").addEventListener("click", (e) => { const b = e.target.closest("button[data-i]"); if (b) selectSynthSound(+b.dataset.i); });
-$("presetPrev").addEventListener("click", () => stepSynthPreset(-1));
-$("presetNext").addEventListener("click", () => stepSynthPreset(1));
 $("synthLoadBtn").addEventListener("click", () => (access.full ? $("synthFileInput").click() : lockedNotice(access, "Abrir outros SF2")));
 $("synthFileInput").addEventListener("change", (e) => {
-  const f = e.target.files[0];
-  if (!f) return;
-  let i = sounds.findIndex((s) => s.name === f.name && s.size === f.size);
-  if (i < 0) {
-    sounds.push({ name: f.name, size: f.size, file: f, nord: isNord(f.name), wav: isWav(f.name), slice: (a, b) => f.slice(a, b) });
-    i = sounds.length - 1;
-    renderPianoList();
+  if (e.target.files.length) {
+    addFiles(e.target.files, "synth");
+    e.target.value = "";
   }
-  selectSynthSound(i);
 });
 
 // ?synth=<url>&synthName=<nome>: abre um SF2 direto no Synth (ex.: um pad da biblioteca do AmostraLab).
@@ -905,9 +973,10 @@ async function loadUrlParamSynth() {
   if (!url || !access.full) return;
   const name = q.get("synthName") || decodeURIComponent(url.split(/[?#]/)[0].split("/").pop() || "synth.sf2");
   try {
-    sounds.push(urlSound(name, await remoteSize(url), url));
-    renderPianoList();
-    selectSynthSound(sounds.length - 1);
+    const sound = urlSound(name, await remoteSize(url), url);
+    synthSounds.push(sound);
+    renderSynthList();
+    selectSynthSound(synthSounds.length - 1);
   } catch (err) {
     synthLcd(name, "Erro ao abrir o SF2", 0);
   }
@@ -925,8 +994,8 @@ function renderStringsList() {
   const L = state.focus.strings || "A";
   const cur = loadedStringsIndex[L];
   const none = L === "B" ? `<li><button data-i="-1" class="${cur < 0 ? "on" : ""}"><span class="led"></span><span class="nm">Nenhum</span></button></li>` : "";
-  if (!sounds.length && !none) { ul.innerHTML = `<li class="empty">Solte .sf2, .npno, .nsmp3, .nsmp4 ou .wav aqui</li>`; return; }
-  ul.innerHTML = none + sounds.map((s, i) => `<li><button data-i="${i}" class="${i === cur ? "on" : ""}"><span class="led"></span><span class="nm">${s.name.replace(EXT, "")}</span><em class="tg ${s.fantom ? "fantom" : s.nord ? "nord" : s.wav ? "wav" : ""}">${tag(s)}</em><span class="sz">${Math.round(s.size / 1048576)}M</span></button></li>`).join("");
+  if (!stringsSounds.length && !none) { ul.innerHTML = `<li class="empty">Solte .sf2, .npno, .nsmp3, .nsmp4 ou .wav aqui</li>`; return; }
+  ul.innerHTML = none + stringsSounds.map((s, i) => `<li><button data-i="${i}" class="${i === cur ? "on" : ""}" title="${s.name.replace(EXT, "")}"><span class="led"></span><span class="nm">${s.name.replace(EXT, "")}</span></button></li>`).join("");
 }
 
 async function selectStrings(i, L = "A") {
@@ -935,18 +1004,23 @@ async function selectStrings(i, L = "A") {
   if (i < 0) {
     stringsOf(L).unload?.();
     loadedStringsIndex[L] = -1;
+    if (L === "A") state.stringsName = null;
+    else state.stringsNameB = null;
     renderStringsList();
     oled("Layer B sem strings", null, layerSummary(), 0);
     return;
   }
-  const s = sounds[i];
+  const s = stringsSounds[i];
   const before = loadedStringsIndex[L];
   loadedStringsIndex[L] = i;
+  if (L === "A") state.stringsName = s.name;
+  else state.stringsNameB = s.name;
   renderStringsList();
   stringsLoading = (async () => {
+    console.log("Loading strings", s.name);
     try {
       loadNotice(s.name.replace(EXT, ""), "Lendo o arquivo…", 0.04);
-      const src = s.nord ? await nordSource(s) : s.fantom ? await fantomSource(s) : s.wav ? await wavSource(s) : s;
+      const src = await getSf2Source(s);
       oled(src.name.replace(/\.sf2$/i, ""), "Lendo SF2…", null, 0);
       loadNotice(src.name.replace(EXT, ""), "Carregando strings…", 0.08);
       await stringsOf(L).load(src, (p) => {
@@ -971,7 +1045,38 @@ async function selectStrings(i, L = "A") {
 
 $("stringsList")?.addEventListener("click", (e) => { const b = e.target.closest("button[data-i]"); if (b) selectStrings(+b.dataset.i, state.focus.strings); });
 $("stringsLoadBtn")?.addEventListener("click", () => (access.full ? $("stringsFileInput").click() : lockedNotice(access, "Abrir outros SF2")));
-$("stringsFileInput")?.addEventListener("change", (e) => { addFiles(e.target.files); e.target.value = ""; });
+$("stringsRemoveBtn")?.addEventListener("click", removeSelectedStrings);
+$("stringsFileInput")?.addEventListener("change", (e) => { addFiles(e.target.files, "strings"); e.target.value = ""; });
+
+function removeSelectedStrings() {
+  const L = state.focus.strings || "A";
+  const idx = loadedStringsIndex[L];
+  if (idx < 0 || !stringsSounds[idx]) {
+    oled("Strings", "Nenhum timbre selecionado", layerSummary());
+    return;
+  }
+  const removedSound = stringsSounds[idx];
+  stringsSounds.splice(idx, 1);
+
+  if (loadedStringsIndex.A === idx) {
+    strings.unload?.();
+    loadedStringsIndex.A = -1;
+    state.stringsName = null;
+  } else if (loadedStringsIndex.A > idx) {
+    loadedStringsIndex.A--;
+  }
+
+  if (loadedStringsIndex.B === idx) {
+    strings.B.unload?.();
+    loadedStringsIndex.B = -1;
+    state.stringsNameB = null;
+  } else if (loadedStringsIndex.B > idx) {
+    loadedStringsIndex.B--;
+  }
+
+  renderStringsList();
+  oled("Strings removido", removedSound.name.replace(EXT, ""), layerSummary());
+}
 
 // Alternador de abas Synth / Strings no painel
 document.querySelectorAll(".syn-tab-btn").forEach((btn) => {
@@ -997,14 +1102,59 @@ document.querySelectorAll(".syn-tab-btn").forEach((btn) => {
 
 renderStringsList();
 
-// Load: carrega na layer em foco (A ou B), como o botão do nativo.
+// Load / Remove: carrega e remove timbres na layer em foco (A ou B).
 $("loadBtn").addEventListener("click", () => (access.full ? $("fileInput").click() : lockedNotice(access, "Abrir outros SF2")));
-$("fileInput").addEventListener("change", (e) => { addFiles(e.target.files); e.target.value = ""; });
+$("removeBtn")?.addEventListener("click", removeSelectedPiano);
+$("fileInput").addEventListener("change", (e) => { addFiles(e.target.files, "piano"); e.target.value = ""; });
+
+function removeSelectedPiano() {
+  const L = state.focus.piano;
+  const idx = loadedIndex[L];
+  if (idx < 0 || !pianoSounds[idx]) {
+    oled("Piano", "Nenhum timbre selecionado", layerSummary());
+    return;
+  }
+  const removedSound = pianoSounds[idx];
+  pianoSounds.splice(idx, 1);
+
+  if (loadedIndex.A === idx) {
+    piano.unload?.();
+    loadedIndex.A = -1;
+    state.pianoName = null;
+  } else if (loadedIndex.A > idx) {
+    loadedIndex.A--;
+  }
+
+  if (loadedIndex.B === idx) {
+    piano.B.unload?.();
+    loadedIndex.B = -1;
+    state.pianoNameB = null;
+  } else if (loadedIndex.B > idx) {
+    loadedIndex.B--;
+  }
+
+  renderPianoList();
+  oled("Piano removido", removedSound.name.replace(EXT, ""), layerSummary());
+}
 let dragDepth = 0;
 addEventListener("dragenter", (e) => { e.preventDefault(); dragDepth++; $("drop").classList.add("show"); });
 addEventListener("dragleave", () => { if (--dragDepth <= 0) { dragDepth = 0; $("drop").classList.remove("show"); } });
 addEventListener("dragover", (e) => e.preventDefault());
-addEventListener("drop", (e) => { e.preventDefault(); dragDepth = 0; $("drop").classList.remove("show"); addFiles(e.dataTransfer.files); });
+addEventListener("drop", (e) => {
+  e.preventDefault();
+  dragDepth = 0;
+  $("drop").classList.remove("show");
+  let mod = "piano";
+  const target = e.target;
+  if (target && target.closest) {
+    if (target.closest('#stringsList, [data-syn-tab="strings"], [data-tab-pane="strings"]')) {
+      mod = "strings";
+    } else if (target.closest('#synthList, [data-syn-tab="synth"], [data-tab-pane="synth"]')) {
+      mod = "synth";
+    }
+  }
+  addFiles(e.dataTransfer.files, mod);
+});
 
 // ---------- Programas ----------
 const PROG_KEY = "labpiano.programs.v2";
@@ -1018,6 +1168,9 @@ function snapshot() {
     sel: Object.fromEntries(Object.entries(selectors).map(([k, s]) => [k, s.get()])),
     layers: layers.state(),
     piano: state.pianoName ?? null, pianoB: state.pianoNameB ?? null,
+    strings: state.stringsName ?? null, stringsB: state.stringsNameB ?? null,
+    synth: state.synthName ?? null, synthPreset: typeof synthPreset === "number" ? synthPreset : 0,
+    workstation: ws?.getState?.() ?? null,
   };
 }
 function recall(p) {
@@ -1033,13 +1186,56 @@ function recall(p) {
       setLayerOct(s, L, l.octave);
       setZone(s, L, l.zone);
     }
+    for (const sec of ["piano", "synth", "strings"]) {
+      if (p.layers[sec]?.A?.level != null) knobs.get(`L.${sec}.A.level`)?.set(p.layers[sec].A.level);
+      if (p.layers[sec]?.B?.level != null) knobs.get(`L.${sec}.B.level`)?.set(p.layers[sec].B.level);
+    }
   }
   Object.assign(state.focus, p.focus ?? {});
   Object.entries(p.on).forEach(([s, v]) => setOn(s, v));
   Object.entries(p.oct).forEach(([s, v]) => setOct(s, v));
   setTranspose(p.transpose);
-  const i = sounds.findIndex((s) => s.name === p.piano);
-  if (i >= 0 && i !== loadedIndex.A) selectPiano(i, "A");
+
+  // Piano A / B
+  if (p.piano !== undefined) {
+    const iA = p.piano ? pianoSounds.findIndex((s) => s.name === p.piano) : -1;
+    if (iA >= 0) { if (iA !== loadedIndex.A) selectPiano(iA, "A"); }
+    else if (p.piano === null && loadedIndex.A >= 0) selectPiano(-1, "A");
+  }
+  if (p.pianoB !== undefined) {
+    const iB = p.pianoB ? pianoSounds.findIndex((s) => s.name === p.pianoB) : -1;
+    if (iB >= 0) { if (iB !== loadedIndex.B) selectPiano(iB, "B"); }
+    else if (p.pianoB === null && loadedIndex.B >= 0) selectPiano(-1, "B");
+  }
+
+  // Strings A / B
+  if (p.strings !== undefined) {
+    const sA = p.strings ? stringsSounds.findIndex((s) => s.name === p.strings) : -1;
+    if (sA >= 0) { if (sA !== loadedStringsIndex.A) selectStrings(sA, "A"); }
+    else if (p.strings === null && loadedStringsIndex.A >= 0) selectStrings(-1, "A");
+  }
+  if (p.stringsB !== undefined) {
+    const sB = p.stringsB ? stringsSounds.findIndex((s) => s.name === p.stringsB) : -1;
+    if (sB >= 0) { if (sB !== loadedStringsIndex.B) selectStrings(sB, "B"); }
+    else if (p.stringsB === null && loadedStringsIndex.B >= 0) selectStrings(-1, "B");
+  }
+
+  // Synth SF2
+  if (p.synth !== undefined) {
+    const synI = p.synth ? synthSounds.findIndex((s) => s.name === p.synth) : -1;
+    if (synI >= 0 && synI !== synthIndex) selectSynthSound(synI);
+    if (typeof p.synthPreset === "number" && synthPresets && synthPresets[p.synthPreset]) {
+      synthPreset = p.synthPreset;
+      showSynthPreset();
+      sampler.selectPreset(synthPresets[synthPreset].bank, synthPresets[synthPreset].num);
+    }
+  }
+
+  // Workstation / Pads
+  if (p.workstation && ws?.setState) {
+    ws.setState(p.workstation);
+  }
+
   refreshLayers();
 }
 let storeArmed = false;
@@ -1061,9 +1257,77 @@ $("storeBtn")?.addEventListener("click", () => {
   armStore(!storeArmed);
 });
 
+$("exportProgBtn")?.addEventListener("click", () => {
+  if (!access.full) { lockedNotice(access, "Export"); return; }
+  try {
+    const data = {
+      version: "2.0",
+      type: "LabPiano_Preset_Bank",
+      exportedAt: new Date().toISOString(),
+      programs: programs.map((p) => p ?? null)
+    };
+    const jsonStr = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `labpiano-presets-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    oled("BANCO EXPORTADO", "Salvo em arquivo JSON", layerSummary());
+  } catch (err) {
+    console.error(err);
+    oled("Erro ao exportar", String(err.message || err), layerSummary());
+  }
+});
+
+$("importProgBtn")?.addEventListener("click", () => {
+  if (!access.full) { lockedNotice(access, "Import"); return; }
+  $("importProgFile")?.click();
+});
+
+$("importProgFile")?.addEventListener("change", async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const importedProgs = Array.isArray(data) ? data : data.programs;
+    if (!Array.isArray(importedProgs)) throw new Error("Formato de arquivo inválido");
+
+    for (let i = 0; i < 8; i++) {
+      programs[i] = importedProgs[i] ?? null;
+    }
+    localStorage.setItem(PROG_KEY, JSON.stringify(programs));
+
+    document.querySelectorAll("#programs .btn.prog").forEach((b, i) => {
+      b.classList.toggle("saved", !!programs[i]);
+    });
+
+    const activeIndex = programs[state.program] ? state.program : programs.findIndex(Boolean);
+    if (activeIndex >= 0 && programs[activeIndex]) {
+      state.program = activeIndex;
+      recall(programs[activeIndex]);
+      showProgram();
+    }
+
+    oled("BANCO IMPORTADO", `${programs.filter(Boolean).length} presets restaurados`, layerSummary());
+  } catch (err) {
+    console.error(err);
+    oled("Erro ao importar", String(err.message || err), layerSummary());
+  } finally {
+    e.target.value = "";
+  }
+});
+
 function saveProgramSlot(i, b) {
   programs[i] = snapshot();
-  try { localStorage.setItem(PROG_KEY, JSON.stringify(programs)); } catch { /* sem storage */ }
+  try {
+    localStorage.setItem(PROG_KEY, JSON.stringify(programs));
+    localStorage.setItem("labpiano.last_program", String(i));
+  } catch { /* sem storage */ }
   b?.classList.add("saved");
   oled(`Program ${i + 1} gravado!`, "Configuração salva no slot", layerSummary());
   armStore(false);
@@ -1103,6 +1367,7 @@ for (let i = 0; i < 8; i++) {
       return;
     }
     state.program = i;
+    try { localStorage.setItem("labpiano.last_program", String(i)); } catch { /* sem storage */ }
     if (e.shiftKey || storeArmed) {
       saveProgramSlot(i, b);
     } else if (programs[i]) {
@@ -1120,13 +1385,25 @@ showProgram();
 // ---------- Medidor ----------
 const meterLeds = [...document.querySelectorAll("#meter i")];
 const buf = new Float32Array(analyser.fftSize);
-(function meter() {
-  analyser.getFloatTimeDomainData(buf);
-  let peak = 0;
-  for (const v of buf) peak = Math.max(peak, Math.abs(v));
-  const dbv = 20 * Math.log10(peak || 1e-6);
-  const lit = Math.max(0, Math.min(meterLeds.length, Math.round((dbv + 48) / (48 / meterLeds.length))));
-  meterLeds.forEach((l, i) => l.classList.toggle("lit", i < lit));
+let meterLast = 0;
+let silentFrames = 0;
+(function meter(now = 0) {
+  const dt = now - meterLast;
+  const interval = silentFrames > 10 ? 400 : 50; // 20 FPS ativo (50ms), ~2.5 FPS em silêncio
+  if (dt >= interval) {
+    meterLast = now;
+    analyser.getFloatTimeDomainData(buf);
+    let peak = 0;
+    for (let i = 0; i < buf.length; i += 4) {
+      const v = Math.abs(buf[i]);
+      if (v > peak) peak = v;
+    }
+    const dbv = 20 * Math.log10(peak || 1e-6);
+    const lit = Math.max(0, Math.min(meterLeds.length, Math.round((dbv + 48) / (48 / meterLeds.length))));
+    if (lit === 0) silentFrames++;
+    else silentFrames = 0;
+    meterLeds.forEach((l, i) => l.classList.toggle("lit", i < lit));
+  }
   requestAnimationFrame(meter);
 })();
 
@@ -1193,8 +1470,38 @@ $("skinBtn").addEventListener("click", () => {
   setSkin(SKINS[(i + 1) % SKINS.length][0]);
 });
 
+// Cor do layout Workstation (seleção e persistência via localStorage "labpiano.ws_color")
+const WS_COLORS = ["red", "orange", "yellow", "green", "moss", "darkblue", "lightblue", "purple", "white"];
+function setWsColor(color) {
+  const validColor = WS_COLORS.includes(color) ? color : "red";
+  document.documentElement.dataset.wsColor = validColor;
+  try { localStorage.setItem("labpiano.ws_color", validColor); } catch { /* sem storage */ }
+  const menu = $("wsColorMenu");
+  if (menu) {
+    menu.querySelectorAll("button[data-ws-color]").forEach((btn) => {
+      const isSel = btn.dataset.wsColor === validColor;
+      btn.classList.toggle("on", isSel);
+      btn.setAttribute("aria-checked", isSel ? "true" : "false");
+    });
+  }
+}
+
+const savedWsColor = (() => {
+  try { return localStorage.getItem("labpiano.ws_color"); } catch { return "red"; }
+})() || "red";
+setWsColor(savedWsColor);
+
+const wsColorMenu = $("wsColorMenu");
+if (wsColorMenu) {
+  wsColorMenu.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-ws-color]");
+    if (btn) {
+      setWsColor(btn.dataset.wsColor);
+    }
+  });
+}
+
 // Pads, arpejador, chord memory, tempo e sequenciador (só agem no layout Workstation).
 ws = mountWorkstation({ noteOn, noteOff, allNotesOff, noteName, oled });
 
-$("synthLcd").addEventListener("click", () => $("sampleRow").classList.toggle("open"));
-$("synthList").addEventListener("click", () => $("sampleRow").classList.remove("open"));
+

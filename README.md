@@ -1,20 +1,13 @@
-# AmostraLab — LabPiano
+# AmostraLab — WorkestraPiano
 
 Projeto de instrumento virtual / workstation musical para navegador.
 
-## Estado atual
+## Funcionalidades e Motores
 
-- Dependências de áudio salvas em [vendor/](vendor/).
-- Inventário da recuperação: [recuperacao/INVENTARIO.md](recuperacao/INVENTARIO.md).
-- Notas técnicas reunidas: [recuperacao/NOTAS-TECNICAS.md](recuperacao/NOTAS-TECNICAS.md).
-- Estado geral: [RECUPERACAO.md](RECUPERACAO.md).
+- FluidSynth 2.4.6 WebAssembly (reprodução de SoundFonts SF2 de alta fidelidade).
+- Síntese de Piano, Órgão Hammond com Drawbars e Caixa Leslie, Sintetizador analógico virtual e seção de Strings.
+- Processador de efeitos: Tremolo, Pan, Chorus, Flanger, Phaser, Delay com sincronização e Reverb de convolução/algorítmico.
+- Suporte a controladores MIDI via Web MIDI API e MIDI Learn.
+- Cache inteligente em IndexedDB para SoundFonts e timbres decodificados.
+- Layouts Stage e Workstation integrados.
 
-## Dependências já incluídas
-
-- FluidSynth 2.4.6 (variante with-libsndfile).
-- js-synthesizer 1.13.0.
-- js-synthesizer AudioWorklet 1.13.0.
-
-## Atenção
-
-As dependências externas já estão no repositório, mas os arquivos-fonte autorais do LabPiano ainda precisam ser recuperados integralmente e testados. Não tratar descrições ou fragmentos de conversas como arquivos completos.
