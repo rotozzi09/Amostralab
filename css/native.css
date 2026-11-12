@@ -193,8 +193,14 @@ svg.ic { overflow: visible; }
 .stage .m-synth { left: 1198px; width: 376px; }
 .stage .m-fx { top: 456px; left: 135px; width: 1051px; height: 192px; padding: 10px 16px 12px; }
 .stage .wordmark { position: absolute; top: 462px; left: 1218px; width: 356px; height: 186px; padding: 0 2px 4px; }
-.stage .wm-name { font: 300 64px/1 var(--font); letter-spacing: -1.4px; }
-.stage .wm-sub { font-size: 12px; letter-spacing: 3.6px; }
+.stage .wm-name {
+  font: 300 64px/1 var(--font);
+  letter-spacing: -1.4px;
+  color: var(--ws-brand-color, #fff);
+  text-shadow: 0 0 25px var(--ws-theme-glow, transparent);
+  transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+.stage .wm-sub { font-size: 12px; letter-spacing: 3.6px; color: var(--ws-sub-color, #fff); }
 
 /* Títulos dentro da ilha (como o nativo): nome à esquerda, ON à direita. */
 .stage .module > h2, .stage .module > .sec-head { position: static; height: 24px; flex: none; }

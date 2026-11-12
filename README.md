@@ -1,4 +1,4 @@
-# AmostraLab — LabPiano
+# AmostraLab — WorkestraPiano
 
 Projeto de instrumento virtual / workstation musical para navegador.
 

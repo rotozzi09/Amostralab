@@ -1,4 +1,4 @@
-const CACHE_NAME = "labpiano-v11";
+const CACHE_NAME = "workestrapiano-v1";
 console.log("Service Worker v11 loading...");
 
 self.addEventListener("install", () => {

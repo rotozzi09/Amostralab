@@ -57,7 +57,7 @@ async function setup() {
       });
     });
     loadUrlParamSynth();
-    if (!programs[0]) oled("LabPiano", "Carregue um SoundFont", layerSummary());
+    if (!programs[0]) oled("WorkestraPiano", "Carregue um SoundFont", layerSummary());
   } catch (e) {
     console.error("Setup error:", e);
     loadNoticeDone();

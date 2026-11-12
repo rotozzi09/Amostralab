@@ -11,6 +11,9 @@
   --mod-line: #0d0e10;
   --ink: #f1f1f1;
   --ink-dim: #a3a8ae;
+  --ws-theme-color: #ff3a2e; /* Fallback para temas */
+  --ws-sub-color: #fff;
+  --ws-header-color: #fff;
   --led: #ff2b17;
   --led-off: #3d0f0b;
   --led-glow: 0 0 4px 1px #ff2b17cc, 0 0 10px 2px #ff2b1755;
@@ -378,8 +381,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .m-fx { grid-column: 6; grid-row: 1; align-self: start; justify-self: stretch; }
 .wordmark { grid-column: 6; grid-row: 1; align-self: end; }
 .wordmark { display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; padding: 0 4px 2px; color: #fff; min-width: 0; text-shadow: 0 1px 0 #0004; }
-.wm-name { font: 300 36px/1 var(--font); letter-spacing: -.8px; }
-.wm-sub { font-size: 8px; font-weight: 700; letter-spacing: 2.4px; text-transform: uppercase; opacity: .85; margin-top: 5px; text-align: right; text-wrap: balance; }
+.wm-name {
+  font: 300 36px/1 var(--font);
+  letter-spacing: -.8px;
+  color: var(--ws-brand-color, #fff);
+  text-shadow: 0 1px 0 #0004, 0 0 15px var(--ws-theme-glow, transparent);
+  transition: color 0.3s ease, text-shadow 0.3s ease, background 0.3s ease;
+}
+.wm-sub { font-size: 8px; font-weight: 700; letter-spacing: 2.4px; text-transform: uppercase; opacity: .85; margin-top: 5px; text-align: right; text-wrap: balance; color: var(--ws-sub-color, #fff); }
 
 /* ---------- Pitch stick e mod wheel ---------- */
 .keybed { display: flex; gap: 14px; margin-top: 10px; align-items: stretch; }
@@ -623,7 +632,7 @@ body.is-loading-sound .keybed { filter: saturate(.4) brightness(.55); }
 
 /* Marca: um reflexo passa pelo nome ao carregar. */
 .wm-name {
-  background: linear-gradient(100deg, #fff 42%, #ffd6cc 50%, #fff 58%) 100% 0 / 260% 100% no-repeat;
+  background: linear-gradient(100deg, var(--ws-brand-color, #fff) 42%, #fff 50%, var(--ws-brand-color, #fff) 58%) 100% 0 / 260% 100% no-repeat;
   -webkit-background-clip: text; background-clip: text; color: transparent;
   animation: wm-shine 2.8s ease-in-out 1.2s 1 both;
 }
@@ -799,8 +808,8 @@ body.is-loading-sound .keybed { filter: saturate(.4) brightness(.55); }
   content: ""; flex: 1; height: 1px; margin-left: 4px; background: linear-gradient(90deg, #ffffffb3, #ffffff33);
 }
 .module > h2, .sec-head h2 {
-  font: 700 17px/1 var(--font); letter-spacing: 2.6px; text-transform: uppercase; color: #fff;
-  text-shadow: 0 1px 0 #0005;
+  font: 700 17px/1 var(--font); letter-spacing: 2.6px; text-transform: uppercase; color: var(--ws-header-color, #fff);
+  text-shadow: 0 1px 0 #0005, var(--ws-header-shadow, none);
 }
 .sec-head h2 {
   flex: 1; display: flex; align-items: center; gap: 9px; margin: 0;

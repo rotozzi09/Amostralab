@@ -143,9 +143,15 @@
 [data-skin="fantom"] .stage .m-pads { position: absolute; top: 462px; left: 1040px; width: 220px; height: 186px; padding: 10px 12px 12px; z-index: 2; }
 [data-skin="fantom"] .stage .m-pads > h2 { position: static; height: 18px; font-size: 13px; letter-spacing: 2.4px; display: flex; align-items: center; gap: 8px; }
 [data-skin="fantom"] .stage .m-pads > h2::before { display: none; }
-[data-skin="fantom"] .stage .wordmark { position: absolute; top: 462px; left: 1276px; width: 298px; height: 186px; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; text-align: right; pointer-events: none; padding-bottom: 4px; }
-[data-skin="fantom"] .stage .wm-name { font-size: 48px; line-height: 1; letter-spacing: -1.2px; margin: 0; text-align: right; }
-[data-skin="fantom"] .stage .wm-sub { font-size: 11px; letter-spacing: 2.8px; margin-top: 2px; opacity: 0.85; text-align: right; }
+[data-skin="fantom"] .stage .wordmark { position: absolute; top: 462px; left: 1276px; width: 298px; height: 186px; display: flex; flex-direction: column; justify-content: center; align-items: flex-end; text-align: right; pointer-events: none; padding-bottom: 4px; gap: 4px; }
+[data-skin="fantom"] .stage .wm-name {
+  font-size: 28px; font-weight: 700; line-height: 0.9;
+  color: var(--ws-brand-color, #fff);
+  text-shadow: 0 0 15px var(--ws-theme-glow, transparent);
+  transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+[data-skin="fantom"] .stage .wm-sub { font-size: 13px; font-weight: 400; line-height: 1.1; color: var(--ws-sub-color, white); margin-top: 2px; opacity: 0.9; }
+[data-skin="fantom"] .stage .wm-ver { font-size: 9px; letter-spacing: 2px; margin-top: 4px; opacity: 0.7; color: var(--ws-sub-color, white); }
 [data-skin="fantom"] .stage .tools { position: absolute; top: 466px; left: 1276px; width: 298px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; z-index: 5; }
 
 /* Fora do palco (celular/tablet): pads numa faixa própria, abaixo do FX. */
@@ -260,6 +266,9 @@ html[data-ws-color="red"] {
   --ws-chassis-bg: linear-gradient(180deg, #de3a33 0, #c41e1c 6%, #b8191a 55%, #a51416 100%);
   --ws-theme-color: #ff3a2e;
   --ws-theme-glow: rgba(255, 58, 46, 0.45);
+  --ws-brand-color: #fff; /* White brand on Red chassis */
+  --ws-sub-color: #fff;
+  --ws-header-color: #fff;
   --led: #ff3a2e;
   --led-off: #3a0d0a;
   --ring: #ff3a2e;
@@ -273,6 +282,7 @@ html[data-ws-color="yellow"] {
   --ws-chassis-bg: linear-gradient(180deg, #e6ab00 0, #d99f00 6%, #c48f00 55%, #997000 100%);
   --ws-theme-color: #ffc800;
   --ws-theme-glow: rgba(255, 200, 0, 0.45);
+  --ws-brand-color: #fff; /* White brand on Yellow chassis */
   --led: #ffc800;
   --led-off: #3a2d00;
   --ring: #ffc800;
@@ -286,6 +296,7 @@ html[data-ws-color="orange"] {
   --ws-chassis-bg: linear-gradient(180deg, #e65c00 0, #d95300 6%, #c44b00 55%, #993b00 100%);
   --ws-theme-color: #ff6b1a;
   --ws-theme-glow: rgba(255, 107, 26, 0.45);
+  --ws-brand-color: #fff; /* White brand on Orange chassis */
   --led: #ff6b1a;
   --led-off: #3a1703;
   --ring: #ff772e;
@@ -299,6 +310,7 @@ html[data-ws-color="green"] {
   --ws-chassis-bg: linear-gradient(180deg, #11b84a 0, #0fa040 6%, #0d8c38 55%, #0a6d2b 100%);
   --ws-theme-color: #10e052;
   --ws-theme-glow: rgba(16, 224, 82, 0.45);
+  --ws-brand-color: #fff; /* White brand on Green chassis */
   --led: #10e052;
   --led-off: #043311;
   --ring: #2be05d;
@@ -312,6 +324,7 @@ html[data-ws-color="darkblue"] {
   --ws-chassis-bg: linear-gradient(180deg, #2462ed 0, #1f57d4 6%, #194bc0 55%, #123896 100%);
   --ws-theme-color: #2979ff;
   --ws-theme-glow: rgba(41, 121, 255, 0.45);
+  --ws-brand-color: #fff; /* White brand on Blue chassis */
   --led: #2979ff;
   --led-off: #071a3a;
   --ring: #2979ff;
@@ -325,6 +338,7 @@ html[data-ws-color="lightblue"] {
   --ws-chassis-bg: linear-gradient(180deg, #00b8e6 0, #00a4cc 6%, #0092b8 55%, #00708f 100%);
   --ws-theme-color: #00e5ff;
   --ws-theme-glow: rgba(0, 229, 255, 0.45);
+  --ws-brand-color: #fff; /* White brand on Light Blue chassis */
   --led: #00e5ff;
   --led-off: #003338;
   --ring: #3fe4ff;
@@ -495,6 +509,7 @@ html[data-ws-color="purple"] {
   --ws-chassis-bg: linear-gradient(180deg, #8b3fd9 0, #7b2cbf 6%, #6c1ec4 55%, #5a12a8 100%);
   --ws-theme-color: #a855f7;
   --ws-theme-glow: rgba(168, 85, 247, 0.45);
+  --ws-brand-color: #fff; /* White brand on Purple chassis */
   --led: #a855f7;
   --led-off: #2a0b42;
   --ring: #c084fc;
@@ -508,6 +523,9 @@ html[data-ws-color="white"] {
   --ws-chassis-bg: linear-gradient(180deg, #ffffff 0, #f1f5f9 6%, #e2e8f0 55%, #cbd5e1 100%);
   --ws-theme-color: #334155;
   --ws-theme-glow: rgba(15, 23, 42, 0.35);
+  --ws-brand-color: #ff3a2e; /* Red brand on White chassis */
+  --ws-sub-color: #ff3a2e; /* Red subtext on White chassis */
+  --ws-header-color: #ff3a2e; /* Red headers on White chassis */
   --led: #0284c7;
   --led-off: #33415511;
   --ring: #0284c7;
@@ -521,6 +539,7 @@ html[data-ws-color="moss"] {
   --ws-chassis-bg: linear-gradient(180deg, #556b2f 0, #4a5d29 6%, #3d4d22 55%, #2d3b19 100%);
   --ws-theme-color: #8fbc8f;
   --ws-theme-glow: rgba(143, 188, 143, 0.45);
+  --ws-brand-color: #fff; /* White brand on Moss chassis */
   --led: #8fbc8f;
   --led-off: #1b2611;
   --ring: #a2d2a2;
