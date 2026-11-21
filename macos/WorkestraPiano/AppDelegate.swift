@@ -54,7 +54,8 @@ final class WebUIURLSchemeHandler: NSObject, WKURLSchemeHandler {
         let headers: [String: String] = [
             "Content-Type": mime,
             "Content-Length": "\(data.count)",
-            "Cache-Control": "no-cache"
+            "Cache-Control": "no-cache",
+            "Access-Control-Allow-Origin": "*"
         ]
         let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: headers)!
         urlSchemeTask.didReceive(response)
@@ -161,7 +162,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         }
         let payload = body["payload"] as? [String: Any] ?? [:]
 
-        if let reqId = body["reqId"] as? Int {
+        if let reqId = (body["reqId"] as? NSNumber)?.intValue {
             if type == "pickSoundFiles" {
                 handlePickSoundFiles(reqId: reqId, module: payload["module"] as? String ?? "piano")
                 return
@@ -212,6 +213,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         } else {
             engine.handleFireAndForget(type: type, payload: payload)
         }
+    }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        engine.emitCurrentStatesToWebUI()
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {

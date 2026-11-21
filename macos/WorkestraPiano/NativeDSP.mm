@@ -1381,6 +1381,21 @@ struct ContinuousPadEngine {
     return static_cast<unsigned int>(devID);
 }
 
++ (NSString *)deviceNameForDevice:(unsigned int)deviceID {
+    if (deviceID == kAudioObjectUnknown) return @"Nenhum";
+    CFStringRef nameRef = nullptr;
+    UInt32 nameSize = sizeof(CFStringRef);
+    AudioObjectPropertyAddress nameProp = {
+        kAudioObjectPropertyName,
+        kAudioObjectPropertyScopeGlobal,
+        kAudioObjectPropertyElementMain
+    };
+    if (AudioObjectGetPropertyData(static_cast<AudioDeviceID>(deviceID), &nameProp, 0, nullptr, &nameSize, &nameRef) == noErr && nameRef != nullptr) {
+        return CFBridgingRelease(nameRef);
+    }
+    return [NSString stringWithFormat:@"Device #%u", deviceID];
+}
+
 + (unsigned int)deviceIDForUID:(nullable NSString *)uid {
     if (uid == nil || [uid isEqualToString:@"default"] || uid.length == 0) {
         return [self defaultOutputDeviceID];
@@ -1433,7 +1448,13 @@ struct ContinuousPadEngine {
     };
     AudioValueRange range = { 32.0, 4096.0 };
     UInt32 rangeSize = sizeof(AudioValueRange);
-    if (AudioObjectGetPropertyData(dev, &rangeProp, 0, nullptr, &rangeSize, &range) == noErr && range.mMaximum >= range.mMinimum) {
+    OSStatus rangeErr = AudioObjectGetPropertyData(dev, &rangeProp, 0, nullptr, &rangeSize, &range);
+    if (rangeErr != noErr) {
+        rangeProp.mScope = kAudioObjectPropertyScopeGlobal;
+        rangeSize = sizeof(AudioValueRange);
+        rangeErr = AudioObjectGetPropertyData(dev, &rangeProp, 0, nullptr, &rangeSize, &range);
+    }
+    if (rangeErr == noErr && range.mMaximum >= range.mMinimum) {
         int minF = std::max(32, static_cast<int>(std::ceil(range.mMinimum)));
         int maxF = std::min(4096, static_cast<int>(std::floor(range.mMaximum)));
         if (minF <= maxF) {
@@ -1452,7 +1473,11 @@ struct ContinuousPadEngine {
     };
     Boolean settable = false;
     if (AudioObjectIsPropertySettable(dev, &prop, &settable) != noErr || !settable) {
-        return current;
+        prop.mScope = kAudioObjectPropertyScopeGlobal;
+        settable = false;
+        if (AudioObjectIsPropertySettable(dev, &prop, &settable) != noErr || !settable) {
+            return current;
+        }
     }
 
     UInt32 target = static_cast<UInt32>(desired);

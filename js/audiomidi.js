@@ -53,6 +53,12 @@ export function mountAudioMidi({
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     state = { ...state, ...saved };
+    if (!state.midiInputId) state.midiInputId = "all";
+    if (Array.isArray(state.enabledMidiInputIds) && state.enabledMidiInputIds.length === 0) {
+      state.enabledMidiInputIds = null;
+    }
+    if (!state.midiChannel) state.midiChannel = "all";
+    if (!state.audioOutputId) state.audioOutputId = "default";
   } catch {
     // fallback para padrão
   }
@@ -424,12 +430,15 @@ export function mountAudioMidi({
   }
 
   if (nativeBridge.active) {
-    syncNativeMidiConfig();
-    nativeBridge.request("setBufferSamples", { samples: Number(state.bufferSamples) || 256 }).catch(() => {});
-    if (state.audioOutputId && state.audioOutputId !== "default") {
-      nativeBridge.request("setAudioDevice", { deviceId: state.audioOutputId }).catch(() => {});
-    }
-    refreshNativeAudioMidiState();
+    (async () => {
+      syncNativeMidiConfig();
+      if (state.audioOutputId && state.audioOutputId !== "default") {
+        await nativeBridge.request("setAudioDevice", { deviceId: state.audioOutputId }).catch(() => {});
+      }
+      const desiredBuf = Number(state.bufferSamples) || 256;
+      await nativeBridge.request("setBufferSamples", { samples: desiredBuf }).catch(() => {});
+      await refreshNativeAudioMidiState();
+    })();
 
     nativeBridge.onEvent("midiEvent", (ev) => {
       if (!ev) return;
@@ -439,6 +448,13 @@ export function mountAudioMidi({
       if (!ev) return;
       nativeAudioState.midiInputs = ev.inputs || [];
       nativeAudioState.midiOutputs = ev.outputs || [];
+      if ("midiError" in ev) nativeAudioState.midiError = ev.midiError || "";
+      if ("midiClientReady" in ev) nativeAudioState.midiClientReady = ev.midiClientReady;
+      if ("midiInputPortReady" in ev) nativeAudioState.midiInputPortReady = ev.midiInputPortReady;
+      if ("midiSourcesCount" in ev) nativeAudioState.midiSourcesCount = ev.midiSourcesCount;
+      if ("midiConnectedCount" in ev) nativeAudioState.midiConnectedCount = ev.midiConnectedCount;
+      if ("midiPacketsReceived" in ev) nativeAudioState.midiPacketsReceived = ev.midiPacketsReceived;
+      if ("midiProtocol" in ev) nativeAudioState.midiProtocol = ev.midiProtocol;
       updateMidiDeviceList();
       updateAudioDeviceList();
       if (ev.notice) notify?.(null, null, ev.notice);
@@ -446,6 +462,7 @@ export function mountAudioMidi({
     nativeBridge.onEvent("audioState", (ev) => {
       if (!ev) return;
       nativeAudioState = { ...nativeAudioState, ...ev };
+      updateMidiDeviceList();
       updateAudioDeviceList();
       updateAudioMetrics();
       if (ev.running === false) {
@@ -573,8 +590,11 @@ export function mountAudioMidi({
     const diag = [
       "WorkestraPiano Diagnostics Report:",
       `Native Bridge Active: ${nativeBridge.active}`,
-      `CoreAudio Running: ${nativeAudioState.running}`,
+      `CoreAudio Running: ${nativeAudioState.running} (Graph Tier: ${nativeAudioState.graphTier ?? "?"})`,
+      `Active Audio Output: ${nativeAudioState.activeDeviceName || "Default"} (${nativeAudioState.outputChannels ?? "?"} ch)`,
       `CoreAudio Error: ${nativeAudioState.error || "None"}`,
+      `CoreMIDI Client/Port: client=${nativeAudioState.midiClientReady ?? "?"} port=${nativeAudioState.midiInputPortReady ?? "?"} proto=${nativeAudioState.midiProtocol || "?"}`,
+      `CoreMIDI Sources/Connected/Packets: sources=${nativeAudioState.midiSourcesCount ?? "?"} connected=${nativeAudioState.midiConnectedCount ?? "?"} packets=${nativeAudioState.midiPacketsReceived ?? "?"}`,
       `CoreMIDI Error: ${nativeAudioState.midiError || "None"}`,
       `Sample Rate: ${nativeAudioState.sampleRate || 44100} Hz`,
       `Buffer Size: ${nativeAudioState.bufferSamples || 256} samples`,
