@@ -516,7 +516,8 @@ final class AudioMidiEngine {
             lastAudioError = nil
         } catch {
             lastAudioError = error.localizedDescription
-            NSLog("WorkestraPiano CoreAudio start error: \(error)")
+            NSLog("WorkestraPiano CoreAudio start error: %@. Retrying...", error.localizedDescription)
+            try? engine.start()
             let snap = getAudioMidiStateSnapshot()
             DispatchQueue.main.async {
                 self.emitEvent("audioState", snap)
@@ -824,6 +825,8 @@ final class AudioMidiEngine {
             if layer == "A" && (isSample || synthIsSample) {
                 if samplerStates["synth:A"]?.url != nil {
                     synthSamplerA.startNote(n, withVelocity: v, onChannel: 0)
+                } else {
+                    dsp.synthNoteOn(0, note: Int32(note), velocity: Int32(vel))
                 }
             } else {
                 dsp.synthNoteOn(layer == "B" ? 1 : 0, note: Int32(note), velocity: Int32(vel))
@@ -832,6 +835,9 @@ final class AudioMidiEngine {
             let key = "\(section):\(layer)"
             if samplerStates[key]?.url != nil {
                 samplerNode(section: section, layer: layer)?.startNote(n, withVelocity: v, onChannel: 0)
+            } else {
+                // Fallback to built-in C++ native synth DSP when no SoundFont is loaded yet
+                dsp.synthNoteOn(layer == "B" ? 1 : 0, note: Int32(note), velocity: Int32(vel))
             }
         default:
             break
@@ -849,7 +855,12 @@ final class AudioMidiEngine {
             }
             dsp.synthNoteOff(layer == "B" ? 1 : 0, note: Int32(note))
         case "piano", "strings":
-            samplerNode(section: section, layer: layer)?.stopNote(n, onChannel: 0)
+            let key = "\(section):\(layer)"
+            if samplerStates[key]?.url != nil {
+                samplerNode(section: section, layer: layer)?.stopNote(n, onChannel: 0)
+            } else {
+                dsp.synthNoteOff(layer == "B" ? 1 : 0, note: Int32(note))
+            }
         default:
             break
         }
