@@ -687,58 +687,60 @@ final class AudioMidiEngine {
             }
         }
 
-        for packetPtr in packetList.unsafeSequence() {
-            let len = min(Int(packetPtr.pointee.length), 256)
-            withUnsafeBytes(of: packetPtr.pointee.data) { raw in
-                var idx = 0
-                while idx < len {
-                    let st = raw[idx]
-                    if st < 0x80 { idx += 1; continue }
-                    if st >= 0xF0 {
-                        if st == 0xF0 {
-                            while idx < len && raw[idx] != 0xF7 { idx += 1 }
-                        }
-                        idx += 1
-                        continue
+        var packet = packetList.pointee.packet
+        var p = withUnsafePointer(to: &packet) { UnsafeMutablePointer(mutating: $0) }
+        for _ in 0..<packetList.pointee.numPackets {
+            let len = min(Int(p.pointee.length), 256)
+            let raw = p.pointee.data
+            var idx = 0
+            while idx < len {
+                let st = raw[idx]
+                if st < 0x80 { idx += 1; continue }
+                if st >= 0xF0 {
+                    if st == 0xF0 {
+                        while idx < len && raw[idx] != 0xF7 { idx += 1 }
                     }
-                    let cmd = st & 0xF0
-                    let msgLen = (cmd == 0xC0 || cmd == 0xD0) ? 2 : 3
-                    guard idx + msgLen <= len else { break }
-                    let d1 = raw[idx + 1]
-                    let d2 = msgLen == 3 ? raw[idx + 2] : 0
-                    idx += msgLen
+                    idx += 1
+                    continue
+                }
+                let cmd = st & 0xF0
+                let msgLen = (cmd == 0xC0 || cmd == 0xD0) ? 2 : 3
+                guard idx + msgLen <= len else { break }
+                let d1 = raw[idx + 1]
+                let d2 = msgLen == 3 ? raw[idx + 2] : 0
+                idx += msgLen
 
-                    let ch = Int(st & 0x0F) + 1
-                    if midiChannelFilter != "all" && Int(midiChannelFilter) != ch {
-                        continue
-                    }
+                let ch = Int(st & 0x0F) + 1
+                if midiChannelFilter != "all" && Int(midiChannelFilter) != ch {
+                    continue
+                }
 
-                    let isPC = (cmd == 0xC0)
-                    let willHandleNatively = directMidi && !isPC && !(cmd == 0xB0 && d1 != 64 && d1 != 1)
-                    if willHandleNatively {
-                        audioQueue.async {
-                            self.processDirectMidi(cmd: cmd, d1: d1, d2: d2)
-                        }
-                    }
-
-                    // Throttle continuous controller visual IPC when audio is already processed natively
-                    let isHighRateCC = willHandleNatively && ((cmd == 0xB0 && d1 != 64) || cmd == 0xE0)
-                    if isHighRateCC {
-                        let now = CFAbsoluteTimeGetCurrent()
-                        if now - lastVisualMidiCC < 0.06 { continue }
-                        lastVisualMidiCC = now
-                    }
-
-                    DispatchQueue.main.async {
-                        self.emitEvent("midiEvent", [
-                            "status": Int(st),
-                            "data1": Int(d1),
-                            "data2": Int(d2),
-                            "handledNatively": willHandleNatively
-                        ])
+                let isPC = (cmd == 0xC0)
+                let willHandleNatively = directMidi && !isPC && !(cmd == 0xB0 && d1 != 64 && d1 != 1)
+                if willHandleNatively {
+                    audioQueue.async {
+                        self.processDirectMidi(cmd: cmd, d1: d1, d2: d2)
                     }
                 }
+
+                // Throttle continuous controller visual IPC when audio is already processed natively
+                let isHighRateCC = willHandleNatively && ((cmd == 0xB0 && d1 != 64) || cmd == 0xE0)
+                if isHighRateCC {
+                    let now = CFAbsoluteTimeGetCurrent()
+                    if now - lastVisualMidiCC < 0.06 { continue }
+                    lastVisualMidiCC = now
+                }
+
+                DispatchQueue.main.async {
+                    self.emitEvent("midiEvent", [
+                        "status": Int(st),
+                        "data1": Int(d1),
+                        "data2": Int(d2),
+                        "handledNatively": willHandleNatively
+                    ])
+                }
             }
+            p = MIDIPacketNext(p)
         }
     }
 
