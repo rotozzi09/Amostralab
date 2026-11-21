@@ -77,6 +77,7 @@ final class AudioMidiEngine {
     private var contPadKey: Int = 0
     private var contPadOctave: Int = 0
     private var lastAudioError: String?
+    private var lastMidiError: String?
 
     // Loaded state tracking
     private struct LoadedSamplerState {
@@ -121,8 +122,9 @@ final class AudioMidiEngine {
     private var midiClient = MIDIClientRef()
     private var midiInputPort = MIDIPortRef()
     private var midiOutputPort = MIDIPortRef()
-    private var connectedSources: [MIDIUniqueID: MIDIEndpointRef] = [:]
+    private var connectedSources: [MIDIEndpointRef: MIDIUniqueID] = [:]
     private var midiInputFilter: String = "all"
+    private var enabledMidiInputIDs: Set<String>? = nil // nil = all devices
     private var midiChannelFilter: String = "all"
     private var midiOutputId: String = "none"
     private var midiThru: Bool = false
@@ -225,10 +227,15 @@ final class AudioMidiEngine {
         reverbUnit.wetDryMix = 0
         reverbUnit.bypass = true
 
+        engine.mainMixerNode.outputVolume = 0.768
+        pianoSectionMixer.outputVolume = 1.0
+        stringsSectionMixer.outputVolume = 1.0
+        preFxBus.outputVolume = 1.0
+
         connectAndStartAudioGraph()
     }
 
-    private func connectAndStartAudioGraph() {
+    private func connectAndStartAudioGraph(bypassEffects: Bool = false) {
         isRebuildingGraph = true
         defer {
             isRebuildingGraph = false
@@ -273,7 +280,9 @@ final class AudioMidiEngine {
         }
 
         let devSR = WorkestraNativeDSP.sampleRate(forDevice: devID)
-        let resolvedSR = (devID != kAudioObjectUnknown && devSR > 0) ? devSR : (outFmt.sampleRate > 0 ? outFmt.sampleRate : 44100.0)
+        let rawSR = (devID != kAudioObjectUnknown && devSR > 0) ? devSR : (outFmt.sampleRate > 0 ? outFmt.sampleRate : 44100.0)
+        // Keep internal AU graph at standard >= 44.1kHz stereo rate; mainMixer -> outputNode adapts to any hardware SR (e.g. Bluetooth HFP)
+        let resolvedSR = (rawSR >= 44100.0 && rawSR <= 192000.0) ? rawSR : 44100.0
         let fmt = AVAudioFormat(standardFormatWithSampleRate: resolvedSR, channels: 2)!
         self.stereoFormat = fmt
 
@@ -295,13 +304,15 @@ final class AudioMidiEngine {
             let dspRef = self.dsp!
             let sn = AVAudioSourceNode(format: fmt) { [weak self] _, _, frameCount, audioBufferList -> OSStatus in
                 let abl = UnsafeMutableAudioBufferListPointer(audioBufferList)
-                guard abl.count >= 2,
-                      let left = abl[0].mData?.assumingMemoryBound(to: Float.self),
-                      let right = abl[1].mData?.assumingMemoryBound(to: Float.self) else {
+                guard abl.count >= 1,
+                      let ch0 = abl[0].mData?.assumingMemoryBound(to: Float.self) else {
                     return noErr
                 }
+                let ch1 = abl.count >= 2
+                    ? (abl[1].mData?.assumingMemoryBound(to: Float.self) ?? ch0)
+                    : ch0
                 let activeSR = self?.sampleRate ?? resolvedSR
-                dspRef.renderLeft(left, right: right, frameCount: Int32(frameCount), sampleRate: activeSR)
+                dspRef.renderLeft(ch0, right: ch1, frameCount: Int32(frameCount), sampleRate: activeSR)
                 return noErr
             }
             engine.attach(sn)
@@ -354,12 +365,18 @@ final class AudioMidiEngine {
             engine.connect(sn, to: preFxBus, format: fmt)
         }
 
-        // FX chain -> mainMixer -> outputNode (format: nil lets AVAudioEngine adapt to Bluetooth A2DP/HFP)
-        engine.connect(preFxBus, to: masterEQ, format: fmt)
-        engine.connect(masterEQ, to: delayUnit, format: fmt)
-        engine.connect(delayUnit, to: reverbUnit, format: fmt)
-        engine.connect(reverbUnit, to: engine.mainMixerNode, format: fmt)
+        // FX chain -> mainMixer -> outputNode (format: nil lets AVAudioEngine adapt to any hardware output)
+        if bypassEffects {
+            engine.connect(preFxBus, to: engine.mainMixerNode, format: fmt)
+        } else {
+            engine.connect(preFxBus, to: masterEQ, format: fmt)
+            engine.connect(masterEQ, to: delayUnit, format: fmt)
+            engine.connect(delayUnit, to: reverbUnit, format: fmt)
+            engine.connect(reverbUnit, to: engine.mainMixerNode, format: fmt)
+        }
         engine.connect(engine.mainMixerNode, to: engine.outputNode, format: nil)
+
+        updateSectionGains()
 
         // Lightweight stereo meter tap on preFxBus mixer (guaranteed 2ch float even if Bluetooth is 1ch HFP)
         preFxBus.installTap(onBus: 0, bufferSize: 1024, format: fmt) { [weak self] buffer, _ in
@@ -400,7 +417,27 @@ final class AudioMidiEngine {
         }
         meterTapInstalled = true
 
-        startAudioEngine()
+        startAudioEngine(allowFallbackReset: !bypassEffects)
+        reapplyLoadedSamplers()
+    }
+
+    private func reapplyLoadedSamplers() {
+        for (key, st) in samplerStates {
+            guard let url = st.url, FileManager.default.fileExists(atPath: url.path) else { continue }
+            let parts = key.split(separator: ":")
+            guard parts.count == 2 else { continue }
+            let sec = String(parts[0])
+            let layer = String(parts[1])
+            guard let sampler = samplerNode(section: sec, layer: layer) else { continue }
+            let bankMSB: UInt8 = (st.bank == 128) ? UInt8(kAUSampler_DefaultPercussionBankMSB) : UInt8(kAUSampler_DefaultMelodicBankMSB)
+            let bankLSB: UInt8 = UInt8(max(0, min(127, st.bank & 0x7F)))
+            let prog: UInt8 = UInt8(max(0, min(127, st.preset & 0x7F)))
+            do {
+                try sampler.loadSoundBankInstrument(at: url, program: prog, bankMSB: bankMSB, bankLSB: bankLSB)
+            } catch {
+                try? sampler.loadSoundBankInstrument(at: url, program: 0, bankMSB: UInt8(kAUSampler_DefaultMelodicBankMSB), bankLSB: 0)
+            }
+        }
     }
 
     private func setupHardwareListeners() {
@@ -443,7 +480,7 @@ final class AudioMidiEngine {
                 }
             }
             self.pendingReconfigWorkItem = item
-            self.audioQueue.asyncAfter(deadline: .now() + 0.18, execute: item)
+            self.audioQueue.asyncAfter(deadline: .now() + 0.22, execute: item)
         }
     }
 
@@ -509,15 +546,25 @@ final class AudioMidiEngine {
         masterEQ.bypass = true
     }
 
-    private func startAudioEngine() {
+    private func startAudioEngine(allowFallbackReset: Bool = true) {
         do {
             engine.prepare()
             try engine.start()
             lastAudioError = nil
         } catch {
             lastAudioError = error.localizedDescription
-            NSLog("WorkestraPiano CoreAudio start error: %@. Retrying...", error.localizedDescription)
-            try? engine.start()
+            NSLog("WorkestraPiano CoreAudio start error: %@", error.localizedDescription)
+            if allowFallbackReset && !isRebuildingGraph {
+                engine.reset()
+                connectAndStartAudioGraph(bypassEffects: true)
+            } else {
+                do {
+                    try engine.start()
+                    lastAudioError = nil
+                } catch {
+                    lastAudioError = error.localizedDescription
+                }
+            }
             let snap = getAudioMidiStateSnapshot()
             DispatchQueue.main.async {
                 self.emitEvent("audioState", snap)
@@ -536,18 +583,20 @@ final class AudioMidiEngine {
         let devID = currentHardwareDeviceID()
         let outSR = engine.outputNode.outputFormat(forBus: 0).sampleRate
         let devSR = WorkestraNativeDSP.sampleRate(forDevice: devID)
-        let sr = outSR > 0 ? outSR : (devSR > 0 ? devSR : 44100.0)
-        let buf = WorkestraNativeDSP.bufferFrameSize(forDevice: devID)
-        self.sampleRate = sr
+        let candidateSR = (devSR.isFinite && devSR > 0) ? devSR : (outSR.isFinite && outSR > 0 ? outSR : 44100.0)
+        let sr = (candidateSR.isFinite && candidateSR > 0) ? candidateSR : 44100.0
+        let buf = max(32, Int(WorkestraNativeDSP.bufferFrameSize(forDevice: devID)))
+        let latencyMs = (Double(buf) / sr) * 1000.0
         let devices = WorkestraNativeDSP.listOutputDevices()
         let (inputs, outputs) = listMidiEndpoints()
 
         return [
             "sampleRate": sr,
-            "bufferSamples": Int(buf),
-            "latencyMs": (Double(buf) / sr) * 1000.0,
+            "bufferSamples": buf,
+            "latencyMs": latencyMs.isFinite ? latencyMs : 5.8,
             "running": engine.isRunning,
             "error": lastAudioError ?? "",
+            "midiError": lastMidiError ?? "",
             "audioDevices": devices,
             "midiInputs": inputs,
             "midiOutputs": outputs
@@ -562,6 +611,20 @@ final class AudioMidiEngine {
                 self.emitEvent("cpuLoad", ["percent": pct])
             }
         }
+        midiQueue.sync {
+            reconnectAllMidiSources()
+        }
+        return audioQueue.sync {
+            return getAudioMidiStateSnapshot()
+        }
+    }
+
+    func rescanMidi() -> [String: Any] {
+        MIDIRestart()
+        midiQueue.sync {
+            connectedSources.removeAll()
+            reconnectAllMidiSources()
+        }
         return audioQueue.sync {
             return getAudioMidiStateSnapshot()
         }
@@ -571,6 +634,18 @@ final class AudioMidiEngine {
         return audioQueue.sync {
             currentDeviceUID = uid.isEmpty ? "default" : uid
             connectAndStartAudioGraph()
+            return getAudioMidiStateSnapshot()
+        }
+    }
+
+    func setSampleRate(_ sr: Double) -> [String: Any] {
+        return audioQueue.sync {
+            let devID = currentHardwareDeviceID()
+            let prev = WorkestraNativeDSP.sampleRate(forDevice: devID)
+            let actual = WorkestraNativeDSP.setSampleRate(sr, forDevice: devID)
+            if abs(actual - prev) > 1.0 || !engine.isRunning {
+                connectAndStartAudioGraph()
+            }
             return getAudioMidiStateSnapshot()
         }
     }
@@ -590,6 +665,7 @@ final class AudioMidiEngine {
 
     func restartAudioEngine() -> [String: Any] {
         return audioQueue.sync {
+            engine.reset()
             connectAndStartAudioGraph()
             return getAudioMidiStateSnapshot()
         }
@@ -612,37 +688,85 @@ final class AudioMidiEngine {
                 }
             }
         }
-        guard status == noErr else { return }
+        guard status == noErr else {
+            lastMidiError = "MIDIClientCreateWithBlock falhou (\(status))"
+            NSLog("WorkestraPiano CoreMIDI client error: %d", status)
+            return
+        }
 
         status = MIDIInputPortCreateWithBlock(midiClient, "WorkestraInput" as CFString, &midiInputPort) { [weak self] packetList, srcConnRefCon in
             guard let self = self else { return }
-            let srcUid = srcConnRefCon != nil ? Int32(Int(bitPattern: srcConnRefCon)) : 0
+            let srcUid = srcConnRefCon != nil ? Int32(truncatingIfNeeded: Int(bitPattern: srcConnRefCon)) : 0
             self.handleMIDIPacketList(packetList, sourceUID: srcUid)
         }
         if status == noErr {
+            lastMidiError = nil
             reconnectAllMidiSources()
+            // Re-enumerate shortly after launch in case MIDIServer finishes USB enumeration asynchronously
+            midiQueue.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+                guard let self = self else { return }
+                self.reconnectAllMidiSources()
+                let (inputs, outputs) = self.listMidiEndpoints()
+                DispatchQueue.main.async {
+                    self.emitEvent("midiDevices", [
+                        "inputs": inputs,
+                        "outputs": outputs
+                    ])
+                }
+            }
+        } else {
+            lastMidiError = "MIDIInputPortCreateWithBlock falhou (\(status))"
+            NSLog("WorkestraPiano CoreMIDI input port error: %d", status)
         }
         MIDIOutputPortCreate(midiClient, "WorkestraOutput" as CFString, &midiOutputPort)
+    }
+
+    private func effectiveUID(for ep: MIDIEndpointRef) -> MIDIUniqueID {
+        var uid: MIDIUniqueID = 0
+        let err = MIDIObjectGetIntegerProperty(ep, kMIDIPropertyUniqueID, &uid)
+        if err != noErr || uid == 0 {
+            let fallback = Int32(bitPattern: UInt32(ep))
+            return fallback == 0 ? 1 : fallback
+        }
+        return uid
     }
 
     private func reconnectAllMidiSources() {
         guard midiInputPort != 0 else { return }
         let count = MIDIGetNumberOfSources()
-        var currentUIDs = Set<MIDIUniqueID>()
+        var currentEndpoints = Set<MIDIEndpointRef>()
         for i in 0..<count {
             let src = MIDIGetSource(i)
-            var uid: MIDIUniqueID = 0
-            MIDIObjectGetIntegerProperty(src, kMIDIPropertyUniqueID, &uid)
-            currentUIDs.insert(uid)
-            if connectedSources[uid] == nil {
-                MIDIPortConnectSource(midiInputPort, src, UnsafeMutableRawPointer(bitPattern: Int(uid)))
-                connectedSources[uid] = src
+            guard src != 0 else { continue }
+            currentEndpoints.insert(src)
+            let uid = effectiveUID(for: src)
+            if connectedSources[src] != uid {
+                if connectedSources[src] != nil {
+                    MIDIPortDisconnectSource(midiInputPort, src)
+                }
+                let connStatus = MIDIPortConnectSource(midiInputPort, src, UnsafeMutableRawPointer(bitPattern: Int(uid)))
+                if connStatus == noErr {
+                    connectedSources[src] = uid
+                } else {
+                    lastMidiError = "MIDIPortConnectSource erro \(connStatus)"
+                    NSLog("WorkestraPiano MIDIPortConnectSource failed for endpoint %u: %d", src, connStatus)
+                }
             }
         }
-        for (uid, ep) in connectedSources where !currentUIDs.contains(uid) {
+        for (ep, _) in connectedSources where !currentEndpoints.contains(ep) {
             MIDIPortDisconnectSource(midiInputPort, ep)
-            connectedSources.removeValue(forKey: uid)
+            connectedSources.removeValue(forKey: ep)
         }
+    }
+
+    private func midiStringProperty(_ obj: MIDIObjectRef, _ prop: CFString) -> String? {
+        var cfStr: Unmanaged<CFString>?
+        guard MIDIObjectGetStringProperty(obj, prop, &cfStr) == noErr,
+              let str = cfStr?.takeRetainedValue() as String? else {
+            return nil
+        }
+        let trimmed = str.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     private func listMidiEndpoints() -> ([[String: String]], [[String: String]]) {
@@ -650,31 +774,51 @@ final class AudioMidiEngine {
         let inCount = MIDIGetNumberOfSources()
         for i in 0..<inCount {
             let ep = MIDIGetSource(i)
-            inputs.append(endpointInfo(ep, fallback: "MIDI Input \(i + 1)"))
+            if ep != 0 {
+                inputs.append(endpointInfo(ep, fallback: "MIDI Input \(i + 1)"))
+            }
         }
         var outputs: [[String: String]] = []
         let outCount = MIDIGetNumberOfDestinations()
         for i in 0..<outCount {
             let ep = MIDIGetDestination(i)
-            outputs.append(endpointInfo(ep, fallback: "MIDI Output \(i + 1)"))
+            if ep != 0 {
+                outputs.append(endpointInfo(ep, fallback: "MIDI Output \(i + 1)"))
+            }
         }
         return (inputs, outputs)
     }
 
     private func endpointInfo(_ ep: MIDIEndpointRef, fallback: String) -> [String: String] {
-        var cfName: Unmanaged<CFString>?
-        MIDIObjectGetStringProperty(ep, kMIDIPropertyDisplayName, &cfName)
-        if cfName == nil {
-            MIDIObjectGetStringProperty(ep, kMIDIPropertyName, &cfName)
+        var name = midiStringProperty(ep, kMIDIPropertyDisplayName)
+            ?? midiStringProperty(ep, kMIDIPropertyName)
+
+        if name == nil {
+            var entity: MIDIEntityRef = 0
+            if MIDIEndpointGetEntity(ep, &entity) == noErr, entity != 0 {
+                name = midiStringProperty(entity, kMIDIPropertyName)
+                if name == nil {
+                    var dev: MIDIDeviceRef = 0
+                    if MIDIEntityGetDevice(entity, &dev) == noErr, dev != 0 {
+                        name = midiStringProperty(dev, kMIDIPropertyName)
+                    }
+                }
+            }
         }
-        let name = (cfName?.takeRetainedValue() as String?) ?? fallback
-        var uid: MIDIUniqueID = 0
-        MIDIObjectGetIntegerProperty(ep, kMIDIPropertyUniqueID, &uid)
-        return ["id": "\(uid)", "name": name]
+        let uid = effectiveUID(for: ep)
+        return ["id": "\(uid)", "name": name ?? fallback]
+    }
+
+    private func isMidiSourceAllowed(_ sourceUID: Int32) -> Bool {
+        let uidStr = "\(sourceUID)"
+        if let allowed = enabledMidiInputIDs {
+            return allowed.contains(uidStr)
+        }
+        return midiInputFilter == "all" || midiInputFilter == uidStr
     }
 
     private func handleMIDIPacketList(_ packetList: UnsafePointer<MIDIPacketList>, sourceUID: Int32) {
-        if midiInputFilter != "all" && midiInputFilter != "\(sourceUID)" {
+        if !isMidiSourceAllowed(sourceUID) {
             return
         }
 
@@ -687,60 +831,80 @@ final class AudioMidiEngine {
             }
         }
 
-        var packet = packetList.pointee.packet
-        var p = withUnsafePointer(to: &packet) { UnsafeMutablePointer(mutating: $0) }
-        for _ in 0..<packetList.pointee.numPackets {
-            let len = min(Int(p.pointee.length), 256)
-            let raw = p.pointee.data
-            var idx = 0
-            while idx < len {
-                let st = raw[idx]
-                if st < 0x80 { idx += 1; continue }
-                if st >= 0xF0 {
-                    if st == 0xF0 {
-                        while idx < len && raw[idx] != 0xF7 { idx += 1 }
+        for packetPtr in packetList.unsafeSequence() {
+            let len = min(Int(packetPtr.pointee.length), 256)
+            withUnsafeBytes(of: packetPtr.pointee.data) { raw in
+                var idx = 0
+                var runningStatus: UInt8 = 0
+                while idx < len {
+                    let b0 = raw[idx]
+                    let st: UInt8
+                    if b0 >= 0xF8 {
+                        // System Real-Time messages (single byte, do not affect running status)
+                        idx += 1
+                        continue
+                    } else if b0 >= 0xF0 {
+                        runningStatus = 0
+                        if b0 == 0xF0 {
+                            while idx < len && raw[idx] != 0xF7 { idx += 1 }
+                            idx += 1
+                        } else if b0 == 0xF1 || b0 == 0xF3 {
+                            idx += 2
+                        } else if b0 == 0xF2 {
+                            idx += 3
+                        } else {
+                            idx += 1
+                        }
+                        continue
+                    } else if b0 >= 0x80 {
+                        st = b0
+                        runningStatus = st
+                        idx += 1
+                    } else if runningStatus >= 0x80 && runningStatus < 0xF0 {
+                        st = runningStatus
+                    } else {
+                        idx += 1
+                        continue
                     }
-                    idx += 1
-                    continue
-                }
-                let cmd = st & 0xF0
-                let msgLen = (cmd == 0xC0 || cmd == 0xD0) ? 2 : 3
-                guard idx + msgLen <= len else { break }
-                let d1 = raw[idx + 1]
-                let d2 = msgLen == 3 ? raw[idx + 2] : 0
-                idx += msgLen
 
-                let ch = Int(st & 0x0F) + 1
-                if midiChannelFilter != "all" && Int(midiChannelFilter) != ch {
-                    continue
-                }
+                    let cmd = st & 0xF0
+                    let dataLen = (cmd == 0xC0 || cmd == 0xD0) ? 1 : 2
+                    guard idx + dataLen <= len else { break }
+                    let d1 = raw[idx]
+                    let d2 = dataLen == 2 ? raw[idx + 1] : 0
+                    idx += dataLen
 
-                let isPC = (cmd == 0xC0)
-                let willHandleNatively = directMidi && !isPC && !(cmd == 0xB0 && d1 != 64 && d1 != 1)
-                if willHandleNatively {
-                    audioQueue.async {
-                        self.processDirectMidi(cmd: cmd, d1: d1, d2: d2)
+                    let ch = Int(st & 0x0F) + 1
+                    if midiChannelFilter != "all" && Int(midiChannelFilter) != ch {
+                        continue
                     }
-                }
 
-                // Throttle continuous controller visual IPC when audio is already processed natively
-                let isHighRateCC = willHandleNatively && ((cmd == 0xB0 && d1 != 64) || cmd == 0xE0)
-                if isHighRateCC {
-                    let now = CFAbsoluteTimeGetCurrent()
-                    if now - lastVisualMidiCC < 0.06 { continue }
-                    lastVisualMidiCC = now
-                }
+                    let isPC = (cmd == 0xC0)
+                    let willHandleNatively = directMidi && !isPC && !(cmd == 0xB0 && d1 != 64 && d1 != 1)
+                    if willHandleNatively {
+                        audioQueue.async {
+                            self.processDirectMidi(cmd: cmd, d1: d1, d2: d2)
+                        }
+                    }
 
-                DispatchQueue.main.async {
-                    self.emitEvent("midiEvent", [
-                        "status": Int(st),
-                        "data1": Int(d1),
-                        "data2": Int(d2),
-                        "handledNatively": willHandleNatively
-                    ])
+                    // Throttle continuous controller visual IPC when audio is already processed natively
+                    let isHighRateCC = willHandleNatively && ((cmd == 0xB0 && d1 != 64) || cmd == 0xE0)
+                    if isHighRateCC {
+                        let now = CFAbsoluteTimeGetCurrent()
+                        if now - lastVisualMidiCC < 0.06 { continue }
+                        lastVisualMidiCC = now
+                    }
+
+                    DispatchQueue.main.async {
+                        self.emitEvent("midiEvent", [
+                            "status": Int(st),
+                            "data1": Int(d1),
+                            "data2": Int(d2),
+                            "handledNatively": willHandleNatively
+                        ])
+                    }
                 }
             }
-            p = MIDIPacketNext(p)
         }
     }
 
@@ -818,6 +982,7 @@ final class AudioMidiEngine {
     }
 
     private func triggerSectionNoteOn(section: String, layer: String, note: Int, vel: Int, isSample: Bool) {
+        if !engine.isRunning { startAudioEngine() }
         let n = UInt8(max(0, min(127, note)))
         let v = UInt8(max(1, min(127, vel)))
         switch section {
@@ -860,9 +1025,8 @@ final class AudioMidiEngine {
             let key = "\(section):\(layer)"
             if samplerStates[key]?.url != nil {
                 samplerNode(section: section, layer: layer)?.stopNote(n, onChannel: 0)
-            } else {
-                dsp.synthNoteOff(layer == "B" ? 1 : 0, note: Int32(note))
             }
+            dsp.synthNoteOff(layer == "B" ? 1 : 0, note: Int32(note))
         default:
             break
         }
@@ -875,6 +1039,9 @@ final class AudioMidiEngine {
             dsp.synthSustain(layer == "B" ? 1 : 0, down: down)
         case "piano", "strings":
             samplerNode(section: section, layer: layer)?.sendController(64, withValue: down ? 127 : 0, onChannel: 0)
+            if samplerStates["\(section):\(layer)"]?.url == nil {
+                dsp.synthSustain(layer == "B" ? 1 : 0, down: down)
+            }
         default:
             break
         }
@@ -888,6 +1055,9 @@ final class AudioMidiEngine {
             dsp.synthMod(layer == "B" ? 1 : 0, value: value)
         case "piano", "strings":
             samplerNode(section: section, layer: layer)?.sendController(1, withValue: ccVal, onChannel: 0)
+            if samplerStates["\(section):\(layer)"]?.url == nil {
+                dsp.synthMod(layer == "B" ? 1 : 0, value: value)
+            }
         default:
             break
         }
@@ -902,13 +1072,16 @@ final class AudioMidiEngine {
         } else {
             bend14 = 8192
         }
+        let computedSemis = semis ?? (Double(Int(bend14) - 8192) / 8191.0) * 2.0
         switch section {
         case "synth":
             if layer == "A" { synthSamplerA.sendPitchBend(bend14, onChannel: 0) }
-            let s = semis ?? (Double(Int(bend14) - 8192) / 8191.0) * 2.0
-            dsp.synthBend(layer == "B" ? 1 : 0, semitones: s)
+            dsp.synthBend(layer == "B" ? 1 : 0, semitones: computedSemis)
         case "piano", "strings":
             samplerNode(section: section, layer: layer)?.sendPitchBend(bend14, onChannel: 0)
+            if samplerStates["\(section):\(layer)"]?.url == nil {
+                dsp.synthBend(layer == "B" ? 1 : 0, semitones: computedSemis)
+            }
         default:
             break
         }
@@ -932,6 +1105,7 @@ final class AudioMidiEngine {
                     s.sendMIDIEvent(0xB0, data1: 123, data2: 0)
                     s.sendMIDIEvent(0xB0, data1: 120, data2: 0)
                 }
+                dsp.synthAllOff(L == "B" ? 1 : 0)
             }
         default:
             break
@@ -1237,10 +1411,13 @@ final class AudioMidiEngine {
             throw NSError(domain: "WorkestraPiano", code: 3, userInfo: [NSLocalizedDescriptionKey: "Slot de sampler inválido"])
         }
 
+        if !engine.isRunning { startAudioEngine() }
+
         let bankMSB: UInt8 = (bank == 128) ? UInt8(kAUSampler_DefaultPercussionBankMSB) : UInt8(kAUSampler_DefaultMelodicBankMSB)
         let bankLSB: UInt8 = UInt8(max(0, min(127, bank & 0x7F)))
         let prog: UInt8 = UInt8(max(0, min(127, preset & 0x7F)))
 
+        sampler.overallGain = 0.0
         do {
             try sampler.loadSoundBankInstrument(at: resolvedURL, program: prog, bankMSB: bankMSB, bankLSB: bankLSB)
         } catch {
@@ -1294,10 +1471,15 @@ final class AudioMidiEngine {
         switch type {
         case "getAudioMidiState":
             return getAudioMidiState()
+        case "rescanMidi":
+            return rescanMidi()
         case "setAudioDevice":
             return setAudioDevice(uid: payload["deviceId"] as? String ?? "default")
+        case "setSampleRate":
+            let sr = (payload["sampleRate"] as? NSNumber)?.doubleValue ?? 44100.0
+            return setSampleRate(sr)
         case "setBufferSamples":
-            return setBufferSamples(payload["samples"] as? Int ?? 256)
+            return setBufferSamples((payload["samples"] as? NSNumber)?.intValue ?? 256)
         case "restartAudioEngine":
             return restartAudioEngine()
         case "getLocalLibrary":
@@ -1311,42 +1493,50 @@ final class AudioMidiEngine {
                 base64: payload["base64"] as? String ?? ""
             )
         case "loadPadSample":
-            return try loadPadSample(
-                index: payload["index"] as? Int ?? 0,
-                name: payload["name"] as? String ?? "pad.wav",
-                path: payload["path"] as? String,
-                base64: payload["base64"] as? String
-            )
+            return try audioQueue.sync {
+                return try loadPadSample(
+                    index: (payload["index"] as? NSNumber)?.intValue ?? 0,
+                    name: payload["name"] as? String ?? "pad.wav",
+                    path: payload["path"] as? String,
+                    base64: payload["base64"] as? String
+                )
+            }
         case "loadPadTimbre":
-            return try loadPadTimbre(
-                kind: payload["kind"] as? String ?? "native",
-                name: payload["name"] as? String ?? "Pad Nativo",
-                path: payload["path"] as? String,
-                base64: payload["base64"] as? String
-            )
+            return try audioQueue.sync {
+                return try loadPadTimbre(
+                    kind: payload["kind"] as? String ?? "native",
+                    name: payload["name"] as? String ?? "Pad Nativo",
+                    path: payload["path"] as? String,
+                    base64: payload["base64"] as? String
+                )
+            }
         case "previewPad":
-            try previewPadSample(
-                name: payload["name"] as? String ?? "pad.wav",
-                path: payload["path"] as? String,
-                base64: payload["base64"] as? String
-            )
+            try audioQueue.sync {
+                try previewPadSample(
+                    name: payload["name"] as? String ?? "pad.wav",
+                    path: payload["path"] as? String,
+                    base64: payload["base64"] as? String
+                )
+            }
             return [:]
         case "readFileSlice":
             return try readFileSlice(
                 path: payload["path"] as? String ?? "",
-                start: payload["start"] as? Int ?? 0,
-                end: payload["end"] as? Int ?? -1
+                start: (payload["start"] as? NSNumber)?.intValue ?? 0,
+                end: (payload["end"] as? NSNumber)?.intValue ?? -1
             )
         case "loadSound":
-            return try loadSoundFont(
-                section: payload["section"] as? String ?? "piano",
-                layer: payload["layer"] as? String ?? "A",
-                name: payload["name"] as? String ?? "sound.sf2",
-                path: payload["path"] as? String,
-                base64: payload["base64"] as? String,
-                bank: payload["bank"] as? Int ?? 0,
-                preset: payload["preset"] as? Int ?? 0
-            )
+            return try audioQueue.sync {
+                return try loadSoundFont(
+                    section: payload["section"] as? String ?? "piano",
+                    layer: payload["layer"] as? String ?? "A",
+                    name: payload["name"] as? String ?? "sound.sf2",
+                    path: payload["path"] as? String,
+                    base64: payload["base64"] as? String,
+                    bank: (payload["bank"] as? NSNumber)?.intValue ?? 0,
+                    preset: (payload["preset"] as? NSNumber)?.intValue ?? 0
+                )
+            }
         default:
             handleFireAndForget(type: type, payload: payload)
             return [:]
@@ -1358,6 +1548,11 @@ final class AudioMidiEngine {
             switch type {
             case "setMidiConfig":
                 self.midiInputFilter = payload["inputId"] as? String ?? "all"
+                if let ids = payload["enabledInputIds"] as? [String] {
+                    self.enabledMidiInputIDs = Set(ids)
+                } else {
+                    self.enabledMidiInputIDs = nil
+                }
                 self.midiChannelFilter = payload["channel"] as? String ?? "all"
                 self.midiOutputId = payload["outputId"] as? String ?? "none"
                 self.midiThru = payload["thru"] as? Bool ?? false
@@ -1367,27 +1562,27 @@ final class AudioMidiEngine {
                 self.dsp.triggerTestChime()
 
             case "playPad":
-                self.playPadSample(index: payload["index"] as? Int ?? 0, loop: payload["loop"] as? Bool ?? false)
+                self.playPadSample(index: (payload["index"] as? NSNumber)?.intValue ?? 0, loop: payload["loop"] as? Bool ?? false)
 
             case "stopPad":
-                self.stopPadSample(index: payload["index"] as? Int ?? 0)
+                self.stopPadSample(index: (payload["index"] as? NSNumber)?.intValue ?? 0)
 
             case "stopAllPads":
                 self.stopAllPads()
 
             case "continuousPad":
                 let playing = payload["playing"] as? Bool ?? false
-                let key = payload["key"] as? Int ?? 0
-                let octave = payload["octave"] as? Int ?? 0
+                let key = (payload["key"] as? NSNumber)?.intValue ?? 0
+                let octave = (payload["octave"] as? NSNumber)?.intValue ?? 0
                 self.updateContinuousPad(playing: playing, key: key, octave: octave)
 
             case "padTimbreNote":
-                let note = UInt8(max(0, min(127, payload["note"] as? Int ?? 60)))
+                let note = UInt8(max(0, min(127, (payload["note"] as? NSNumber)?.intValue ?? 60)))
                 let on = payload["on"] as? Bool ?? false
                 if self.padTimbreKind == .samplerSF2 {
                     if on {
                         if !self.engine.isRunning { self.startAudioEngine() }
-                        let vel = UInt8(max(1, min(127, payload["vel"] as? Int ?? 100)))
+                        let vel = UInt8(max(1, min(127, (payload["vel"] as? NSNumber)?.intValue ?? 100)))
                         self.padTimbreSampler.startNote(note, withVelocity: vel, onChannel: 0)
                     } else {
                         self.padTimbreSampler.stopNote(note, onChannel: 0)
@@ -1408,8 +1603,8 @@ final class AudioMidiEngine {
             case "selectPreset":
                 let sec = payload["section"] as? String ?? "synth"
                 let layer = payload["layer"] as? String ?? "A"
-                let bank = payload["bank"] as? Int ?? 0
-                let preset = payload["preset"] as? Int ?? 0
+                let bank = (payload["bank"] as? NSNumber)?.intValue ?? 0
+                let preset = (payload["preset"] as? NSNumber)?.intValue ?? 0
                 if let url = self.samplerStates["\(sec):\(layer)"]?.url {
                     _ = try? self.loadSoundFont(section: sec, layer: layer, name: url.lastPathComponent, path: url.path, base64: nil, bank: bank, preset: preset)
                 }
@@ -1433,16 +1628,16 @@ final class AudioMidiEngine {
 
             case "sectionOctave":
                 let sec = payload["section"] as? String ?? "piano"
-                self.sectionOctave[sec] = payload["octave"] as? Int ?? 0
+                self.sectionOctave[sec] = (payload["octave"] as? NSNumber)?.intValue ?? 0
 
             case "transpose":
-                self.transpose = payload["value"] as? Int ?? 0
+                self.transpose = (payload["value"] as? NSNumber)?.intValue ?? 0
 
             case "split":
-                self.splitNote = payload["note"] as? Int ?? 60
+                self.splitNote = (payload["note"] as? NSNumber)?.intValue ?? 60
 
             case "routing":
-                if let curve = payload["curve"] as? Double { self.velCurve = curve }
+                if let curve = (payload["curve"] as? NSNumber)?.doubleValue { self.velCurve = curve }
                 if let direct = payload["directMidi"] as? Bool { self.directMidi = direct }
 
             case "layer":
@@ -1451,11 +1646,11 @@ final class AudioMidiEngine {
                 if let patch = payload["patch"] as? [String: Any] {
                     var lr = self.layerRouting[sec]?[layer] ?? LayerRouting(on: true)
                     if let on = patch["on"] as? Bool { lr.on = on }
-                    if let lvl = patch["level"] as? Double {
+                    if let lvl = (patch["level"] as? NSNumber)?.doubleValue {
                         lr.level = Float(max(0.0, min(1.0, lvl)))
                         self.dsp.setLayerLevel(sec, layer: layer, value: lr.level)
                     }
-                    if let oct = patch["octave"] as? Int { lr.octave = oct }
+                    if let oct = (patch["octave"] as? NSNumber)?.intValue { lr.octave = oct }
                     if let zone = patch["zone"] as? String { lr.zone = zone }
                     self.layerRouting[sec]?[layer] = lr
                     self.updateSectionGains()
@@ -1464,15 +1659,15 @@ final class AudioMidiEngine {
             case "noteOn":
                 let sec = payload["section"] as? String ?? "piano"
                 let layer = payload["layer"] as? String ?? "A"
-                let note = payload["note"] as? Int ?? 60
-                let vel = payload["vel"] as? Int ?? 100
+                let note = (payload["note"] as? NSNumber)?.intValue ?? 60
+                let vel = (payload["vel"] as? NSNumber)?.intValue ?? 100
                 let isSample = payload["sample"] as? Bool ?? false
                 self.triggerSectionNoteOn(section: sec, layer: layer, note: note, vel: vel, isSample: isSample)
 
             case "noteOff":
                 let sec = payload["section"] as? String ?? "piano"
                 let layer = payload["layer"] as? String ?? "A"
-                let note = payload["note"] as? Int ?? 60
+                let note = (payload["note"] as? NSNumber)?.intValue ?? 60
                 self.triggerSectionNoteOff(section: sec, layer: layer, note: note)
 
             case "sustain":
@@ -1484,12 +1679,12 @@ final class AudioMidiEngine {
             case "pitchBend":
                 let sec = payload["section"] as? String ?? "piano"
                 let layer = payload["layer"] as? String ?? "A"
-                self.setPitchBend(section: sec, layer: layer, raw: payload["raw"] as? Int, semis: payload["semis"] as? Double)
+                self.setPitchBend(section: sec, layer: layer, raw: (payload["raw"] as? NSNumber)?.intValue, semis: (payload["semis"] as? NSNumber)?.doubleValue)
 
             case "modWheel":
                 let sec = payload["section"] as? String ?? "piano"
                 let layer = payload["layer"] as? String ?? "A"
-                self.setModWheel(section: sec, layer: layer, value: payload["value"] as? Double ?? 0.0)
+                self.setModWheel(section: sec, layer: layer, value: (payload["value"] as? NSNumber)?.doubleValue ?? 0.0)
 
             case "allOff":
                 self.allNotesOff(section: payload["section"] as? String ?? "piano", layer: payload["layer"] as? String)
@@ -1509,15 +1704,19 @@ final class AudioMidiEngine {
                 let action = payload["action"] as? String ?? ""
                 switch action {
                 case "bar":
-                    self.dsp.setOrganBar(Int32(payload["manual"] as? Int ?? 0), index: Int32(payload["index"] as? Int ?? 0), level: Int32(payload["level"] as? Int ?? 0))
+                    self.dsp.setOrganBar(
+                        Int32((payload["manual"] as? NSNumber)?.intValue ?? 0),
+                        index: Int32((payload["index"] as? NSNumber)?.intValue ?? 0),
+                        level: Int32((payload["level"] as? NSNumber)?.intValue ?? 0)
+                    )
                 case "model":
-                    self.dsp.setOrganModel(Int32(payload["manual"] as? Int ?? 0), model: payload["model"] as? String ?? "b3")
+                    self.dsp.setOrganModel(Int32((payload["manual"] as? NSNumber)?.intValue ?? 0), model: payload["model"] as? String ?? "b3")
                 case "perc":
                     if let p = payload["perc"] as? [String: Any] {
                         self.dsp.setOrganPercOn(p["on"] as? Bool ?? false, third: p["third"] as? Bool ?? false, fast: p["fast"] as? Bool ?? false)
                     }
                 case "vib":
-                    self.dsp.setOrganVibMode(Int32(payload["mode"] as? Int ?? 0))
+                    self.dsp.setOrganVibMode(Int32((payload["mode"] as? NSNumber)?.intValue ?? 0))
                 case "drive":
                     self.dsp.setOrganDrive((payload["value"] as? NSNumber)?.doubleValue ?? 0.0)
                 case "rotary":

@@ -83,12 +83,12 @@ function createPianoLayer(layer = "A") {
       }
     },
     loaded: () => current?.source ?? null,
-    noteOn: (note, vel) => current && nativeBridge.send("noteOn", { section: "piano", layer, note, vel }),
-    noteOff: (note) => current && nativeBridge.send("noteOff", { section: "piano", layer, note }),
-    sustain: (down) => current && nativeBridge.send("sustain", { section: "piano", layer, down }),
-    pitchBend: (v) => current && nativeBridge.send("pitchBend", { section: "piano", layer, raw: v }),
+    noteOn: (note, vel) => (current || nativeBridge.active) && nativeBridge.send("noteOn", { section: "piano", layer, note, vel }),
+    noteOff: (note) => (current || nativeBridge.active) && nativeBridge.send("noteOff", { section: "piano", layer, note }),
+    sustain: (down) => (current || nativeBridge.active) && nativeBridge.send("sustain", { section: "piano", layer, down }),
+    pitchBend: (v) => (current || nativeBridge.active) && nativeBridge.send("pitchBend", { section: "piano", layer, raw: v }),
     allOff: () => nativeBridge.send("allOff", { section: "piano", layer }),
-    modWheel: (v) => current && nativeBridge.send("modWheel", { section: "piano", layer, value: v }),
+    modWheel: (v) => (current || nativeBridge.active) && nativeBridge.send("modWheel", { section: "piano", layer, value: v }),
   };
 }
 

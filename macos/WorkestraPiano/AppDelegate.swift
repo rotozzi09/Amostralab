@@ -174,6 +174,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
                 handlePickPadTimbreFile(reqId: reqId)
                 return
             }
+            if type == "openAudioMidiSetup" {
+                let appURL = URL(fileURLWithPath: "/System/Applications/Utilities/Audio MIDI Setup.app")
+                if FileManager.default.fileExists(atPath: appURL.path) {
+                    NSWorkspace.shared.openApplication(at: appURL, configuration: NSWorkspace.OpenConfiguration()) { _, _ in }
+                    resolveRequest(reqId: reqId, ok: true, data: ["opened": true], error: nil)
+                } else {
+                    let legacyURL = URL(fileURLWithPath: "/Applications/Utilities/Audio MIDI Setup.app")
+                    if FileManager.default.fileExists(atPath: legacyURL.path) {
+                        NSWorkspace.shared.openApplication(at: legacyURL, configuration: NSWorkspace.OpenConfiguration()) { _, _ in }
+                        resolveRequest(reqId: reqId, ok: true, data: ["opened": true], error: nil)
+                    } else {
+                        resolveRequest(reqId: reqId, ok: true, data: ["opened": false], error: nil)
+                    }
+                }
+                return
+            }
+            if type == "copyToClipboard" {
+                let text = payload["text"] as? String ?? ""
+                NSPasteboard.general.clearContents()
+                let ok = NSPasteboard.general.setString(text, forType: .string)
+                resolveRequest(reqId: reqId, ok: true, data: ["copied": ok], error: nil)
+                return
+            }
             backgroundQueue.async {
                 do {
                     let result = try self.engine.handleRequest(type: type, payload: payload)
@@ -189,6 +212,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         } else {
             engine.handleFireAndForget(type: type, payload: payload)
         }
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        NSLog("WorkestraPiano WebView didFail navigation: %@", error.localizedDescription)
+    }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        NSLog("WorkestraPiano WebView didFailProvisionalNavigation: %@", error.localizedDescription)
     }
 
     private func handlePickSoundFiles(reqId: Int, module: String) {
@@ -284,7 +315,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         }
 
         let js = "window.__workestraNativeResolve && window.__workestraNativeResolve(\(reqId), \(ok ? "true" : "false"), \(dataJSON), \(errJSON));"
-        webView.evaluateJavaScript(js, completionHandler: nil)
+        if Thread.isMainThread {
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        } else {
+            DispatchQueue.main.async { [weak self] in
+                self?.webView?.evaluateJavaScript(js, completionHandler: nil)
+            }
+        }
     }
 
     private func sendNativeEvent(type: String, payload: [String: Any]) {
@@ -297,6 +334,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         }
         let typeLiteral = String(typeArrStr.dropFirst().dropLast())
         let js = "window.__workestraNativeEvent && window.__workestraNativeEvent(\(typeLiteral), \(dataStr));"
-        webView.evaluateJavaScript(js, completionHandler: nil)
+        if Thread.isMainThread {
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        } else {
+            DispatchQueue.main.async { [weak self] in
+                self?.webView?.evaluateJavaScript(js, completionHandler: nil)
+            }
+        }
     }
 }

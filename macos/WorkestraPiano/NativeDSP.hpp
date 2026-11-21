@@ -50,6 +50,7 @@ NS_ASSUME_NONNULL_BEGIN
 + (int)bufferFrameSizeForDevice:(unsigned int)deviceID;
 + (int)setBufferFrameSize:(int)frames forDevice:(unsigned int)deviceID;
 + (double)sampleRateForDevice:(unsigned int)deviceID;
++ (double)setSampleRate:(double)sampleRate forDevice:(unsigned int)deviceID;
 
 @end
 

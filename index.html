@@ -1469,6 +1469,7 @@
                     <option value="default">Built-in Output</option>
                   </select>
                   <button type="button" class="btn small am-test-btn" id="amTestAudioBtn" title="Tocar som de teste">Test</button>
+                  <button type="button" class="btn small" id="amResumeAudioBtn" title="Reiniciar motor CoreAudio">Reiniciar</button>
                 </div>
               </div>
               <div class="am-field">
@@ -1484,32 +1485,37 @@
                 <label for="amSrSelect">Sample rate:</label>
                 <select id="amSrSelect" class="am-select">
                   <option value="44100">44100 Hz</option>
-                  <option value="48000" selected>48000 Hz</option>
+                  <option value="48000">48000 Hz</option>
                   <option value="96000">96000 Hz</option>
                 </select>
               </div>
               <div class="am-field">
                 <label for="amBufferSelect">Audio buffer size:</label>
                 <select id="amBufferSelect" class="am-select">
-                  <option value="64">64 samples (~1.3 ms)</option>
-                  <option value="128" selected>128 samples (~2.9 ms)</option>
-                  <option value="256">256 samples (~5.3 ms)</option>
-                  <option value="512">512 samples (~10.7 ms)</option>
+                  <option value="64">64 samples (~1.5 ms)</option>
+                  <option value="128">128 samples (~2.9 ms)</option>
+                  <option value="256" selected>256 samples (~5.8 ms)</option>
+                  <option value="512">512 samples (~11.6 ms)</option>
+                  <option value="1024">1024 samples (~23.2 ms)</option>
                 </select>
               </div>
             </div>
 
             <div class="am-field" style="margin-top: 10px;">
-              <label>Active MIDI inputs:</label>
+              <div class="am-field-head">
+                <label>Active MIDI inputs:</label>
+                <button type="button" class="btn small am-mini-btn" id="amRescanMidiBtn" title="Re-escanear portas CoreMIDI">Atualizar MIDI</button>
+              </div>
               <div class="am-checkbox-box" id="amMidiInputsBox">
                 <label class="am-check-label"><input type="checkbox" checked disabled /> <span>Nenhum controlador MIDI detectado</span></label>
               </div>
             </div>
 
             <div class="am-row-btn" style="margin-top: 10px; justify-content: space-between;">
-              <button type="button" class="btn small" id="amBluetoothMidiBtn" title="Configurar dispositivos Bluetooth MIDI">Bluetooth MIDI</button>
+              <button type="button" class="btn small" id="amBluetoothMidiBtn" title="Abrir Configuração de Áudio e MIDI / Bluetooth MIDI do macOS">Bluetooth MIDI</button>
               <button type="button" class="btn small" id="amCopyDiagBtn" title="Copiar relatório de diagnóstico para a área de transferência">Copy diagnostics</button>
             </div>
+            <p class="am-status-msg" id="amAudioStatusMsg" aria-live="polite"></p>
           </section>
 
           <!-- SEÇÃO 2: CONTROLADOR MIDI AVANÇADO & MAPAS -->

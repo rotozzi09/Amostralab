@@ -1476,4 +1476,62 @@ struct ContinuousPadEngine {
     return sr > 0.0 ? sr : 44100.0;
 }
 
++ (double)setSampleRate:(double)sampleRate forDevice:(unsigned int)deviceID {
+    if (deviceID == kAudioObjectUnknown || sampleRate <= 0.0) {
+        return [self sampleRateForDevice:deviceID];
+    }
+    AudioDeviceID dev = static_cast<AudioDeviceID>(deviceID);
+    double current = [self sampleRateForDevice:deviceID];
+    if (std::fabs(current - sampleRate) < 1.0) {
+        return current;
+    }
+
+    double desired = sampleRate;
+    AudioObjectPropertyAddress availProp = {
+        kAudioDevicePropertyAvailableNominalSampleRates,
+        kAudioObjectPropertyScopeGlobal,
+        kAudioObjectPropertyElementMain
+    };
+    UInt32 availSize = 0;
+    if (AudioObjectGetPropertyDataSize(dev, &availProp, 0, nullptr, &availSize) == noErr && availSize >= sizeof(AudioValueRange)) {
+        std::vector<AudioValueRange> ranges(availSize / sizeof(AudioValueRange));
+        if (AudioObjectGetPropertyData(dev, &availProp, 0, nullptr, &availSize, ranges.data()) == noErr) {
+            double best = desired;
+            double bestDist = 1e12;
+            bool exact = false;
+            for (const auto &r : ranges) {
+                if (desired >= r.mMinimum - 1.0 && desired <= r.mMaximum + 1.0) {
+                    best = desired;
+                    exact = true;
+                    break;
+                }
+                double cand = (desired < r.mMinimum) ? r.mMinimum : r.mMaximum;
+                double d = std::fabs(cand - desired);
+                if (d < bestDist) {
+                    bestDist = d;
+                    best = cand;
+                }
+            }
+            if (!exact) desired = best;
+        }
+    }
+
+    AudioObjectPropertyAddress prop = {
+        kAudioDevicePropertyNominalSampleRate,
+        kAudioObjectPropertyScopeGlobal,
+        kAudioObjectPropertyElementMain
+    };
+    Boolean settable = false;
+    if (AudioObjectIsPropertySettable(dev, &prop, &settable) != noErr || !settable) {
+        prop.mScope = kAudioDevicePropertyScopeOutput;
+        if (AudioObjectIsPropertySettable(dev, &prop, &settable) != noErr || !settable) {
+            return current;
+        }
+    }
+
+    Float64 target = static_cast<Float64>(desired);
+    AudioObjectSetPropertyData(dev, &prop, 0, nullptr, sizeof(Float64), &target);
+    return [self sampleRateForDevice:deviceID];
+}
+
 @end

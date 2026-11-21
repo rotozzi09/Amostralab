@@ -1237,9 +1237,29 @@ body.midi-learn [data-learn].learn-armed { outline: 2px solid #ff3b2a; animation
   gap: 6px;
   align-items: center;
 }
+.am-sec-desc {
+  margin: 0;
   font-size: 11px;
   line-height: 1.4;
   color: #94a3b8;
+}
+.am-field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.am-mini-btn {
+  height: 22px;
+  padding: 0 8px;
+  font-size: 10px;
+}
+.am-status-msg {
+  margin: 2px 0 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #94a3b8;
+  font-family: var(--mono);
 }
 .am-grid-2 {
   display: grid;
