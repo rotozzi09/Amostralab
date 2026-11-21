@@ -1454,19 +1454,76 @@
         </header>
 
         <div class="am-body">
-          <!-- SEÇÃO 1: MIDI IN / OUT / MONITOR -->
+          <!-- SEÇÃO 1: AUDIO/MIDI SETTINGS PRINCIPAL -->
+          <section class="am-section">
+            <div class="am-sec-h">
+              <i class="ic" data-icon="gear" data-size="14"></i>
+              <h3>Audio/MIDI Settings</h3>
+            </div>
+            
+            <div class="am-grid-2">
+              <div class="am-field">
+                <label for="amAudioOut">Output:</label>
+                <div class="am-row-btn">
+                  <select id="amAudioOut" class="am-select" style="flex: 1;">
+                    <option value="default">Built-in Output</option>
+                  </select>
+                  <button type="button" class="btn small am-test-btn" id="amTestAudioBtn" title="Tocar som de teste">Test</button>
+                </div>
+              </div>
+              <div class="am-field">
+                <label>Active output channels:</label>
+                <div class="am-checkbox-box">
+                  <label class="am-check-label"><input type="checkbox" checked disabled /> <span>Output 1 + 2</span></label>
+                </div>
+              </div>
+            </div>
+
+            <div class="am-grid-2" style="margin-top: 10px;">
+              <div class="am-field">
+                <label for="amSrSelect">Sample rate:</label>
+                <select id="amSrSelect" class="am-select">
+                  <option value="44100">44100 Hz</option>
+                  <option value="48000" selected>48000 Hz</option>
+                  <option value="96000">96000 Hz</option>
+                </select>
+              </div>
+              <div class="am-field">
+                <label for="amBufferSelect">Audio buffer size:</label>
+                <select id="amBufferSelect" class="am-select">
+                  <option value="64">64 samples (~1.3 ms)</option>
+                  <option value="128" selected>128 samples (~2.9 ms)</option>
+                  <option value="256">256 samples (~5.3 ms)</option>
+                  <option value="512">512 samples (~10.7 ms)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="am-field" style="margin-top: 10px;">
+              <label>Active MIDI inputs:</label>
+              <div class="am-checkbox-box" id="amMidiInputsBox">
+                <label class="am-check-label"><input type="checkbox" checked disabled /> <span>Nenhum controlador MIDI detectado</span></label>
+              </div>
+            </div>
+
+            <div class="am-row-btn" style="margin-top: 10px; justify-content: space-between;">
+              <button type="button" class="btn small" id="amBluetoothMidiBtn" title="Configurar dispositivos Bluetooth MIDI">Bluetooth MIDI</button>
+              <button type="button" class="btn small" id="amCopyDiagBtn" title="Copiar relatório de diagnóstico para a área de transferência">Copy diagnostics</button>
+            </div>
+          </section>
+
+          <!-- SEÇÃO 2: CONTROLADOR MIDI AVANÇADO & MAPAS -->
           <section class="am-section">
             <div class="am-sec-h">
               <i class="ic" data-icon="midi" data-size="14"></i>
-              <h3>Dispositivos MIDI (Entrada &amp; Saída)</h3>
+              <h3>Controle MIDI Avançado &amp; Canais</h3>
             </div>
             <div class="am-grid-2">
               <div class="am-field">
-                <label for="amMidiIn">Controlador / Entrada MIDI (MIDI IN)</label>
+                <label for="amMidiIn">Controlador Principal (MIDI IN)</label>
                 <select id="amMidiIn" class="am-select">
                   <option value="all">Todos os Dispositivos (Omni)</option>
                 </select>
-                <span class="am-hint">Selecione o teclado controlador conectado via USB/MIDI.</span>
               </div>
               <div class="am-field">
                 <label for="amMidiChannel">Canal MIDI de Recepção</label>
@@ -1489,7 +1546,6 @@
                   <option value="15">Canal 15</option>
                   <option value="16">Canal 16</option>
                 </select>
-                <span class="am-hint">Filtro de canal ou recepção em todos (Omni).</span>
               </div>
             </div>
 
@@ -1499,61 +1555,24 @@
                 <select id="amMidiOut" class="am-select">
                   <option value="none">Desativada (Nenhuma)</option>
                 </select>
-                <span class="am-hint">Porta para automação externa ou MIDI Thru.</span>
               </div>
               <div class="am-field am-thru-field">
                 <label class="am-check-label">
                   <input type="checkbox" id="amMidiThru" />
-                  <span>Ativar MIDI Thru (repassar notas e controles à saída)</span>
+                  <span>Ativar MIDI Thru</span>
                 </label>
                 <div class="am-btn-row" style="margin-top: 6px;">
-                  <button type="button" class="btn small" id="amLearnBtn" title="Mapear botões e knobs no painel">
-                    <span class="led"></span>
-                    Mapear MIDI Learn
-                  </button>
-                  <button type="button" class="btn small" id="amPanicBtn" title="Cortar notas presas">
-                    <span class="led"></span>
-                    Pânico (All Notes Off)
-                  </button>
+                  <button type="button" class="btn small" id="amLearnBtn">Mapear MIDI Learn</button>
+                  <button type="button" class="btn small" id="amPanicBtn">Pânico (All Notes Off)</button>
                 </div>
               </div>
             </div>
 
             <!-- Monitor de Atividade MIDI -->
-            <div class="am-monitor-box">
+            <div class="am-monitor-box" style="margin-top: 8px;">
               <span class="am-act-led" id="amMidiActLed"></span>
               <span class="am-monitor-label">Atividade MIDI:</span>
               <span class="am-monitor-msg" id="amMidiMonitorMsg">Aguardando eventos MIDI...</span>
-            </div>
-          </section>
-
-          <!-- SEÇÃO 2: SAÍDA DE ÁUDIO -->
-          <section class="am-section">
-            <div class="am-sec-h">
-              <i class="ic" data-icon="master" data-size="14"></i>
-              <h3>Dispositivo de Saída de Áudio</h3>
-            </div>
-            <div class="am-grid-2">
-              <div class="am-field">
-                <label for="amAudioOut">Interface / Placa de Saída de Áudio</label>
-                <select id="amAudioOut" class="am-select">
-                  <option value="default">Saída Padrão do Sistema</option>
-                </select>
-                <span class="am-hint" id="amAudioStatusMsg">Dispositivo ativo.</span>
-              </div>
-              <div class="am-field am-test-field">
-                <label>Diagnóstico e Teste</label>
-                <div class="am-btn-row">
-                  <button type="button" class="btn small am-test-btn" id="amTestAudioBtn" title="Tocar acorde de teste">
-                    <span class="led"></span>
-                    🔊 Tocar Som de Teste
-                  </button>
-                  <button type="button" class="btn small" id="amResumeAudioBtn" title="Reiniciar motor de áudio">
-                    Reiniciar Áudio
-                  </button>
-                </div>
-                <span class="am-hint">Confira se o som sai nos fones ou monitores corretos.</span>
-              </div>
             </div>
           </section>
 

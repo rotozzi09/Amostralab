@@ -170,6 +170,19 @@ export function mountAudioMidi({
     button.classList.toggle("has-midi", hasConnectedIn);
     if (btnLed) btnLed.title = hasConnectedIn ? "CoreMIDI conectado" : "Nenhum controlador CoreMIDI detectado";
 
+    const midiInputsBox = dialog.querySelector("#amMidiInputsBox");
+    if (midiInputsBox) {
+      const inputs = nativeAudioState.midiInputs || [];
+      if (!inputs.length) {
+        midiInputsBox.innerHTML = `<label class="am-check-label"><input type="checkbox" checked disabled /> <span>Nenhum controlador MIDI detectado</span></label>`;
+      } else {
+        midiInputsBox.innerHTML = inputs.map((input) => {
+          const isChecked = state.midiInputId === "all" || state.midiInputId === input.id;
+          return `<label class="am-check-label"><input type="checkbox" data-midi-id="${input.id}" ${isChecked ? "checked" : ""} /> <span>${input.name || "Controlador MIDI"}</span></label>`;
+        }).join("");
+      }
+    }
+
     const currentOut = state.midiOutputId;
     let outHtml = `<option value="none">Desativada (Nenhuma)</option>`;
     for (const output of nativeAudioState.midiOutputs || []) {
@@ -397,6 +410,19 @@ export function mountAudioMidi({
   els.learnBtn?.addEventListener("click", () => {
     dialog.close();
     document.getElementById("midiBtn")?.click();
+  });
+
+  dialog.querySelector("#amBluetoothMidiBtn")?.addEventListener("click", () => {
+    notify?.("Bluetooth MIDI", "Gerencie dispositivos Bluetooth MIDI nas Preferências do Sistema macOS ou no utilitário 'Configuração de Áudio e MIDI'.", "CoreMIDI");
+  });
+
+  dialog.querySelector("#amCopyDiagBtn")?.addEventListener("click", () => {
+    const diag = `WorkestraPiano Diagnostics Report:\nSample Rate: ${nativeAudioState.sampleRate || 44100} Hz\nBuffer Size: ${nativeAudioState.bufferSamples || 256} samples\nLatency: ${(nativeAudioState.latencyMs || 2.9).toFixed(1)} ms\nMIDI Inputs: ${(nativeAudioState.midiInputs || []).map(m => m.name).join(", ") || "None"}\nAudio Outputs: ${(nativeAudioState.audioDevices || []).map(d => d.name).join(", ") || "Default"}`;
+    navigator.clipboard?.writeText(diag).then(() => {
+      notify?.(null, null, "Relatório de diagnóstico copiado para a área de transferência");
+    }).catch(() => {
+      notify?.(null, "Erro ao copiar", "Permissão da área de transferência negada");
+    });
   });
 
   els.bufferGrid?.addEventListener("click", async (e) => {

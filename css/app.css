@@ -1206,8 +1206,37 @@ body.midi-learn [data-learn].learn-armed { outline: 2px solid #ff3b2a; animation
   text-transform: uppercase;
   color: #f1f5f9;
 }
-.am-sec-desc {
-  margin: 0;
+.am-checkbox-box {
+  background: #0c0e12;
+  border: 1px solid #232730;
+  border-radius: 4px;
+  padding: 6px 10px;
+  max-height: 110px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.am-check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #d1d5db;
+  cursor: pointer;
+  user-select: none;
+}
+.am-check-label input[type="checkbox"] {
+  accent-color: var(--ws-theme-color, #ff3a2e);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+.am-row-btn {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
   font-size: 11px;
   line-height: 1.4;
   color: #94a3b8;
